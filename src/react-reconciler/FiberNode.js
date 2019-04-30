@@ -28,3 +28,6 @@ export default class FiberNode {
 
     }
 }
+export const tag = {
+    HostRoot: 3
+}

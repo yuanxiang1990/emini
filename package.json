@@ -1,0 +1,41 @@
+{
+  "name": "reactme",
+  "version": "0.0.1",
+  "description": "a very simple react",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "jest",
+    "dev": "node server",
+    "build": "node ./node_modules/webpack/bin/webpack.js --config ./webpack.config.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yuanxiang1990/ReactMe.git"
+  },
+  "keywords": [
+    "react"
+  ],
+  "author": "yuanx",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/yuanxiang1990/react-me/issues"
+  },
+  "homepage": "https://github.com/yuanxiang1990/react-me#readme",
+  "devDependencies": {
+    "@babel/core": "^7.4.3",
+    "@babel/preset-env": "^7.4.3",
+    "@babel/preset-react": "^7.0.0",
+    "babel-loader": "^8.0.5",
+    "express": "^4.16.4",
+    "html-webpack-plugin": "^3.2.0",
+    "jest": "^24.7.1",
+    "opn": "^6.0.0",
+    "webpack": "^4.30.0",
+    "webpack-cli": "^3.3.1",
+    "webpack-dev-middleware": "^3.6.2",
+    "webpack-hot-middleware": "^2.24.4"
+  }
+}

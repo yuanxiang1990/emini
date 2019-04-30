@@ -11,6 +11,8 @@ import {
     computeInteractiveExpiration,
     computeAsyncExpiration
 } from "./ReactFiberExpirationTime.js"
+import FiberNode, {tag} from "./FiberNode";
+import {updateHost} from "./differ";
 
 let isRendering = false;
 let currentSchedulerTime = maxSigned31BitInt - Date.now();
@@ -20,13 +22,16 @@ let currentRendererTime = msToExpirationTime(originalStartTimeMs);
 let nextRenderExpirationTime = NoWork;
 let isWorking = false;
 let isCommitting = false;
-let isBatchingInteractiveUpdates = false;
+let isBatchingInteractiveUpdates = false;//是否高优先级更新，如用户交互等
 const updateQueue = [];//更新队列
+let workInProgress = null;//当前工作树
+let nextUnitOfWork;//下一工作单元的任务
 function updateContainer(children, containerFiberRoot) {
-    let current = containerFiberRoot.current;
+    let root = containerFiberRoot;
     let currentTime = requestCurrentTime();
     let expirationTime = computeExpirationForFiber(currentTime);
-    return updateContainerAtExpirationTime(current, children, expirationTime)
+    root.expirationTime = expirationTime;
+    return updateContainerAtExpirationTime(root, children, expirationTime)
 }
 
 function updateContainerAtExpirationTime(currentFiber, element, expirationTime) {
@@ -35,16 +40,16 @@ function updateContainerAtExpirationTime(currentFiber, element, expirationTime) 
 
 
 function scheduleWork(current, element, expirationTime) {
-    updateQueue.push({current});
-    requestWork(element, expirationTime);
+    updateQueue.push(element);
+    requestWork(current, expirationTime);
 }
 
-function requestWork(element, expirationTime) {
+function requestWork(current, expirationTime) {
     if (expirationTime === Sync) {
-        performSyncWork(element);
+        performSyncWork(current);
     }
     else {
-        performAsyncWork(element, expirationTime);
+        performAsyncWork(current, expirationTime);
     }
 }
 
@@ -52,30 +57,61 @@ function performSyncWork() {
 
 }
 
-function performAsyncWork() {
-    const workInProgress = createWorkInProgress(updateQueue);
-    requestIdleCallback(performWork)
-
+function performAsyncWork(current, expirationTime) {
+    recomputeCurrentRendererTime();
+    requestIdleCallback((deadline) => performWork(deadline, current), {
+        timeout: currentRendererTime - expirationTime
+    })
 }
 
-function performWork(deadline) {
-    console.log(deadline)
+function performWork(deadline, current) {
+    workInProgress = createWorkInProgress(current);
+    nextUnitOfWork = workInProgress;
+    workLoop(deadline);
+    recomputeCurrentRendererTime();
+    let expirationTime = workInProgress.expirationTime;
+    //继续处理回调
+    if (nextUnitOfWork && currentRendererTime > expirationTime) {
+        requestIdleCallback(performWork, {
+            timeout: currentRendererTime - expirationTime
+        })
+    }
 }
 
 function workLoop(deadline) {
-
-}
-
-function performUnitWork() {
-
-}
-
-function createWorkInProgress(updateQueue) {
-    const update = updateQueue.shift();
-    return {
-        stateNode: update.current.stateNode,
-        alternate: update.current
+    console.log(deadline.timeRemaining())
+    while (nextUnitOfWork && deadline.timeRemaining() > 0) {
+        nextUnitOfWork = performUnitWork(nextUnitOfWork);
     }
+    console.log(workInProgress)
+}
+
+function performUnitWork(nextUnitOfWork) {
+    return beginWork(nextUnitOfWork);
+}
+
+function beginWork(workInProgress) {
+    switch (workInProgress.tag) {
+        case tag.HostRoot://处理根节点
+            const update = updateQueue.shift();
+            updateHost(workInProgress, update);
+            return workInProgress.child;
+            break;
+    }
+
+}
+
+function createWorkInProgress(current) {
+    if (workInProgress === null) {
+        workInProgress = new FiberNode(current.tag);
+        workInProgress.alternate = current;
+        workInProgress.stateNode = current.stateNode;
+        current.alternate = workInProgress;
+    }
+    else {
+        workInProgress.effect = [];
+    }
+    return workInProgress;
 }
 
 function requestCurrentTime() {
@@ -101,7 +137,7 @@ function requestCurrentTime() {
 }
 
 function recomputeCurrentRendererTime() {
-    var currentTimeMs = Date.now() - originalStartTimeMs;
+    let currentTimeMs = Date.now() - originalStartTimeMs;
     currentRendererTime = msToExpirationTime(currentTimeMs);
 }
 
@@ -121,7 +157,6 @@ function computeExpirationForFiber(currentTime) {
         }
     }
     return expirationTime
-
 }
 
 
