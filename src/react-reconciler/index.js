@@ -12,7 +12,7 @@ import {
     computeAsyncExpiration
 } from "./ReactFiberExpirationTime.js"
 import FiberNode, {tag} from "./FiberNode";
-import {updateHost} from "./differ";
+import {updateHostComponent} from "./differ";
 
 let isRendering = false;
 let currentSchedulerTime = maxSigned31BitInt - Date.now();
@@ -49,8 +49,7 @@ function scheduleWork(current, element, expirationTime) {
 function requestWork(current, expirationTime) {
     if (expirationTime === Sync) {
         performSyncWork(current);
-    }
-    else {
+    } else {
         performAsyncWork(current, expirationTime);
     }
 }
@@ -61,11 +60,7 @@ function performSyncWork() {
 
 function performAsyncWork(current, expirationTime) {
     recomputeCurrentRendererTime();
-    const update = {
-        props:{
-            children: updateQueue.shift()
-        }
-    };
+    const update = updateQueue.shift();
     requestIdleCallback((deadline) => {
         return performWork(deadline, current, update), {
             timeout: currentRendererTime - expirationTime
@@ -74,9 +69,9 @@ function performAsyncWork(current, expirationTime) {
 }
 
 function performWork(deadline, current, update) {
-    workInProgress = createWorkInProgress(current);
+    workInProgress = createWorkInProgress(current, update);
     nextUnitOfWork = workInProgress;
-    workLoop(deadline, update);
+    workLoop(deadline);
     recomputeCurrentRendererTime();
     let expirationTime = workInProgress.expirationTime;
     //继续处理回调
@@ -89,36 +84,38 @@ function performWork(deadline, current, update) {
     }
 }
 
-function workLoop(deadline, update) {
+function workLoop(deadline) {
     while (nextUnitOfWork && deadline.timeRemaining() > 0) {
-        nextUnitOfWork = performUnitWork(nextUnitOfWork, update);
+        nextUnitOfWork = performUnitWork(nextUnitOfWork);
+    }
+    console.log(workInProgress,9090)
+}
+
+function performUnitWork(nextUnitOfWork) {
+    return beginWork(nextUnitOfWork);
+}
+
+function beginWork(currentFiber) {
+    console.log(currentFiber)
+    switch (currentFiber.tag) {
+       /* case tag.HostRoot://处理根节点
+            break;*/
+        default:
+            return updateHostComponent(currentFiber);
+
     }
 }
 
-function performUnitWork(nextUnitOfWork, update) {
-    return beginWork(nextUnitOfWork, update);
-}
-
-function beginWork(workInProgress, element) {
-    console.log(workInProgress.tag)
-    switch (workInProgress.tag) {
-        case tag.HostRoot://处理根节点
-            updateHost(workInProgress, element);
-            return workInProgress.child;
-            break;
-    }
-
-}
-
-function createWorkInProgress(current) {
+function createWorkInProgress(current, update) {
     if (workInProgress === null) {
         workInProgress = new FiberNode(current.tag);
         workInProgress.alternate = current;
         workInProgress.stateNode = current.stateNode;
-        workInProgress.props = current.props;
+        workInProgress.props = current.props || {};
+        workInProgress.props.children = update;
+        workInProgress.expirationTime = current.expirationTime;
         current.alternate = workInProgress;
-    }
-    else {
+    } else {
         workInProgress.effect = [];
     }
     return workInProgress;

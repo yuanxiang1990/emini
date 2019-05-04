@@ -72,15 +72,13 @@ function differChildren(oldChildren, newChildren) {
                 remove(simulateArray[i]);
                 i++;
                 j++;
-            }
-            else {
+            } else {
                 simulateArray.splice(i, 0, newItem);
                 insert(newItem);
                 i++;
                 j++;
             }
-        }
-        else {
+        } else {
             simulateArray.push(newItem);
             insert(newItem);
             i++;
@@ -130,33 +128,41 @@ function toArray(fiber) {
 }
 
 
-function updateHost(workInProgress, element) {
-    console.log(element)
+function updateHostComponent(currentFiber) {
+    let newFiber, element = currentFiber.props.children;
+    if (!element) {
+        return
+    }
     if (Array.isArray(element) && element.length > 0) {
-        const firstEle = element[0];
-        const newFiber = new FiberNode(firstEle.type);
-        newFiber.stateNode = document.createElement(firstEle.type);
-        newFiber.return = workInProgress;
-        element.slice(1).forEach((ele) => {
-            const newFiber = new FiberNode(ele.type);
-            newFiber.stateNode = document.createElement(ele.type);
-            newFiber.return = workInProgress;
-            newFiber.sibling = newFiber;
+        let prevNode;
+        element.forEach((ele, i) => {
+            const firstEle = ele;
+            let newSiblingFiber = new FiberNode(firstEle.type);
+            newSiblingFiber.stateNode = document.createElement(firstEle.type);
+            newSiblingFiber.return = currentFiber;
+            newSiblingFiber.props = {
+                children: firstEle.props.children
+            }
+            if (i === 0) {
+                newFiber = newSiblingFiber;
+            } else {
+                prevNode.sibling = newSiblingFiber;
+            }
+            prevNode = newSiblingFiber;
         })
-    }
-    else {
-        const newFiber = new FiberNode(element.type);
+    } else {
+        newFiber = new FiberNode(element.type);
         newFiber.stateNode = document.createElement(element.type);
-        newFiber.return = workInProgress;
-        workInProgress.child = newFiber;
+        newFiber.return = currentFiber;
+        console.log(element)
+        newFiber.props = {
+            children: element.props ? element.props.children : null
+        }
     }
-    const newFiber = new FiberNode(element.type);
-    newFiber.stateNode = document.createElement(element.type);
-    newFiber.return = workInProgress;
-    differChildren(toArray(workInProgress.alternate.child), toArray(newFiber));
-    console.log(workInProgress,0)
-    return workInProgress.child;
+    differChildren(toArray(currentFiber.child), toArray(newFiber));
+    currentFiber.child = newFiber;
+    return currentFiber.child;
 }
 
 
-export {updateHost}
+export {updateHostComponent}

@@ -4,6 +4,7 @@ const webpack = require("webpack");
 
 module.exports = {
     mode: "development",
+    devtool: "cheap-source-map",
     entry: {
         app: [
             "webpack-hot-middleware/client?noInfo=true&reload=true",
