@@ -1,9 +1,13 @@
-import FiberNode from "./FiberNode";
+import FiberNode, {tag} from "./FiberNode";
 
-const REPLACE = 0;
-const REORDER = 1;
-const ATTR = 2;
-const TEXT = 3;
+/**
+ * effect tag
+ */
+export const Effect = {
+    PLACEMENT: 1,
+    DELETION: 2,
+    UPDATE: 3
+}
 
 function sameNode(oldNode, newNode) {
     return (
@@ -31,14 +35,16 @@ function contains(a, obj) {
 function differChildren(oldChildren, newChildren) {
     var newAdd = [], simulateArray = [], moves = [];
     var oldCopy = [].concat(oldChildren);
+
+
     /**
-     * 丢弃被删除的节点
+     * 首先保证新旧children相似，提升算法效率
      */
     for (var i = 0; i < oldCopy.length; i++) {
         var newNode = contains(newChildren, oldCopy[i]);
         if (!newNode) {
             oldCopy.splice(i, 1);
-            remove(i);
+            remove(oldCopy[i]);
             i--;
         }
     }
@@ -46,7 +52,7 @@ function differChildren(oldChildren, newChildren) {
     for (var i = 0; i < newChildren.length; i++) {
         if (!contains(oldCopy, newChildren[i])) {
             newAdd.push(newChildren[i]);
-            insert(oldCopy.length + newAddIndex, newChildren[i]);
+            insert(newChildren[i]);
             newAddIndex++;
         }
     }
@@ -63,35 +69,33 @@ function differChildren(oldChildren, newChildren) {
         if (simulateArray[i]) {
             if (sameNode(simulateArray[i + 1], newItem)) {
                 simulateArray.splice(i, 1);
-                remove(i);
+                remove(simulateArray[i]);
                 i++;
                 j++;
             }
             else {
                 simulateArray.splice(i, 0, newItem);
-                insert(i, newItem);
+                insert(newItem);
                 i++;
                 j++;
             }
         }
         else {
             simulateArray.push(newItem);
-            insert(i, newItem);
+            insert(newItem);
             i++;
             j++;
         }
     }
 
     // 记录remove操作
-    function remove(index) {
-        let move = {index: index, type: 0}
-        moves.push(move)
+    function remove(item) {
+        item.effectTag = Effect.DELETION;
     }
 
     // 记录insert操作
-    function insert(index, item) {
-        let move = {index: index, item: item, type: 1};
-        moves.push(move)
+    function insert(item) {
+        item.effectTag = Effect.PLACEMENT;
     }
 
     /**
@@ -99,15 +103,19 @@ function differChildren(oldChildren, newChildren) {
      */
     while (simulateArray.length > newChildren.length) {
         simulateArray.splice(simulateArray.length - 1, 1);
-        remove(simulateArray.length - 1);
+        remove(simulateArray[simulateArray.length - 1]);
     }
 
     return {
-        moves: moves,
-        children: simulateArray
+        moves: moves
     }
 }
 
+/**
+ * 链表换数组
+ * @param fiber
+ * @returns {Array}
+ */
 function toArray(fiber) {
     const children = [];
     if (fiber) {
@@ -122,34 +130,31 @@ function toArray(fiber) {
 }
 
 
-function updateHost(workInProgress, newFiber) {
-    const effect = differChildren(toArray(workInProgress.alternate.child), toArray(newFiber));
-    console.log(effect)
-    console.log(newFiber)
-    effect.moves.forEach((item) => {
-        if (item.type === 1) {//子节点插入
-            const element = item.item;
-            console.log(element)
-            const child = new FiberNode(element.type);
-            child.stateNode = document.createElement(element.type);
-            child.return = workInProgress;
-            if (workInProgress.child == null) {
-                workInProgress.child = child;
-            }
-            else {
-                let i = 0;
-                let sibling;
-                while (sibling = workInProgress.child.sibling) {
-                    if (i === item.index) {
-                        let temp = sibling;
-
-                    }
-                    i++
-                }
-            }
-        }
-    })
-    workInProgress.effect.push(effect);
+function updateHost(workInProgress, element) {
+    console.log(element)
+    if (Array.isArray(element) && element.length > 0) {
+        const firstEle = element[0];
+        const newFiber = new FiberNode(firstEle.type);
+        newFiber.stateNode = document.createElement(firstEle.type);
+        newFiber.return = workInProgress;
+        element.slice(1).forEach((ele) => {
+            const newFiber = new FiberNode(ele.type);
+            newFiber.stateNode = document.createElement(ele.type);
+            newFiber.return = workInProgress;
+            newFiber.sibling = newFiber;
+        })
+    }
+    else {
+        const newFiber = new FiberNode(element.type);
+        newFiber.stateNode = document.createElement(element.type);
+        newFiber.return = workInProgress;
+        workInProgress.child = newFiber;
+    }
+    const newFiber = new FiberNode(element.type);
+    newFiber.stateNode = document.createElement(element.type);
+    newFiber.return = workInProgress;
+    differChildren(toArray(workInProgress.alternate.child), toArray(newFiber));
+    console.log(workInProgress,0)
     return workInProgress.child;
 }
 

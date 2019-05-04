@@ -15,13 +15,13 @@ export default class FiberNode {
         this.sibling = null;
         this.index = 0;
 
-        this.ref = null;
+        this.props = null;
 
 
         // Effects
         // this.effectTag = NoEffect;
         this.effect = [];
-
+        this.effectTag = null;
         this.expirationTime = NoWork;
 
         this.alternate = null;

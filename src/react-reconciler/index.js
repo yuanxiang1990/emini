@@ -26,8 +26,9 @@ let isBatchingInteractiveUpdates = false;//是否高优先级更新，如用户�
 const updateQueue = [];//更新队列
 let workInProgress = null;//当前工作树
 let nextUnitOfWork;//下一工作单元的任务
+let root = null;//当前fiber tree
 function updateContainer(children, containerFiberRoot) {
-    let root = containerFiberRoot;
+    root = containerFiberRoot;
     let currentTime = requestCurrentTime();
     let expirationTime = computeExpirationForFiber(currentTime);
     root.expirationTime = expirationTime;
@@ -35,6 +36,7 @@ function updateContainer(children, containerFiberRoot) {
 }
 
 function updateContainerAtExpirationTime(currentFiber, element, expirationTime) {
+    currentFiber.expirationTime = expirationTime;
     scheduleWork(currentFiber, element, expirationTime)
 }
 
@@ -59,42 +61,49 @@ function performSyncWork() {
 
 function performAsyncWork(current, expirationTime) {
     recomputeCurrentRendererTime();
-    requestIdleCallback((deadline) => performWork(deadline, current), {
-        timeout: currentRendererTime - expirationTime
+    const update = {
+        props:{
+            children: updateQueue.shift()
+        }
+    };
+    requestIdleCallback((deadline) => {
+        return performWork(deadline, current, update), {
+            timeout: currentRendererTime - expirationTime
+        }
     })
 }
 
-function performWork(deadline, current) {
+function performWork(deadline, current, update) {
     workInProgress = createWorkInProgress(current);
     nextUnitOfWork = workInProgress;
-    workLoop(deadline);
+    workLoop(deadline, update);
     recomputeCurrentRendererTime();
     let expirationTime = workInProgress.expirationTime;
     //继续处理回调
     if (nextUnitOfWork && currentRendererTime > expirationTime) {
-        requestIdleCallback(performWork, {
-            timeout: currentRendererTime - expirationTime
+        requestIdleCallback((deadline) => {
+            return performWork(deadline, current, update), {
+                timeout: currentRendererTime - expirationTime
+            }
         })
     }
 }
 
-function workLoop(deadline) {
-    console.log(deadline.timeRemaining())
+function workLoop(deadline, update) {
     while (nextUnitOfWork && deadline.timeRemaining() > 0) {
-        nextUnitOfWork = performUnitWork(nextUnitOfWork);
+        nextUnitOfWork = performUnitWork(nextUnitOfWork, update);
     }
-    console.log(workInProgress)
 }
 
-function performUnitWork(nextUnitOfWork) {
-    return beginWork(nextUnitOfWork);
+function performUnitWork(nextUnitOfWork, update) {
+    return beginWork(nextUnitOfWork, update);
 }
 
-function beginWork(workInProgress) {
+function beginWork(workInProgress, element) {
+    console.log(workInProgress.tag)
     switch (workInProgress.tag) {
         case tag.HostRoot://处理根节点
-            const update = updateQueue.shift();
-            updateHost(workInProgress, update);
+            updateHost(workInProgress, element);
             return workInProgress.child;
             break;
     }
@@ -106,6 +115,7 @@ function createWorkInProgress(current) {
         workInProgress = new FiberNode(current.tag);
         workInProgress.alternate = current;
         workInProgress.stateNode = current.stateNode;
+        workInProgress.props = current.props;
         current.alternate = workInProgress;
     }
     else {
