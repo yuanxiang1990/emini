@@ -127,35 +127,14 @@ function fiberListToArray(fiber) {
     return children
 }
 
-
-export function updateHostComponent(currentFiber) {
-    let newFiber, element = currentFiber.props.children;
-    /**
-     * 无子节点的情况
-     */
-    if (!element) {
-        const sibling = currentFiber.sibling;
-        if (sibling) {
-            //继续向右遍历
-            return sibling;
-        }
-        /**
-         * 需要向上回溯
-         */
-        else {
-            let topFiber = currentFiber.return;
-            while (topFiber.tag !== tag.HostRoot) {
-                console.log(topFiber)
-                if (topFiber.sibling) {
-                    return topFiber.sibling
-                }
-                else {
-                    topFiber = topFiber.return;
-                }
-            }
-            return null;
-        }
-    }
+/**
+ * 通过element生成fiber
+ * @param currentFiber
+ * @param element
+ * @returns {*}
+ */
+function createFiberFromElement(currentFiber, element) {
+    let newFiber;
     /**
      * 子节点为多个
      */
@@ -165,12 +144,11 @@ export function updateHostComponent(currentFiber) {
          * 构建子节点链
          */
         element.forEach((ele, i) => {
-            const firstEle = ele;
-            let newSiblingFiber = new createFiber(tag.HostComponent, firstEle.type);
-            newSiblingFiber.stateNode = document.createElement(firstEle.type);
+            let newSiblingFiber = new createFiber(tag.HostComponent, ele.type);
+            newSiblingFiber.stateNode = document.createElement(ele.type);
             newSiblingFiber.return = currentFiber;
             newSiblingFiber.props = {
-                children: firstEle.props.children
+                children: ele.props.children
             }
             if (i === 0) {
                 newFiber = newSiblingFiber;
@@ -196,6 +174,37 @@ export function updateHostComponent(currentFiber) {
             newFiber.props = {}
         }
     }
+    return newFiber;
+}
+
+export function updateHostComponent(currentFiber) {
+    let newFiber, element = currentFiber.props.children;
+    /**
+     * 无子节点的情况
+     */
+    if (!element) {
+        const sibling = currentFiber.sibling;
+        if (sibling) {
+            //继续向右遍历
+            return sibling;
+        }
+        /**
+         * 需要向上回溯
+         */
+        else {
+            let topFiber = currentFiber.return;
+            while (topFiber.tag !== tag.HostRoot) {
+                if (topFiber.sibling) {
+                    return topFiber.sibling
+                }
+                else {
+                    topFiber = topFiber.return;
+                }
+            }
+            return null;
+        }
+    }
+    newFiber = createFiberFromElement(currentFiber, element)
     /**
      * 子节点differ算法
      */
