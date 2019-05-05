@@ -1,4 +1,4 @@
-import FiberNode, {tag} from "./FiberNode";
+import {tag,createFiber} from "./FiberNode";
 
 /**
  * effect tag
@@ -114,7 +114,7 @@ function differChildren(oldChildren, newChildren) {
  * @param fiber
  * @returns {Array}
  */
-function toArray(fiber) {
+function fiberListToArray(fiber) {
     const children = [];
     if (fiber) {
         let sib = fiber.sibling;
@@ -128,7 +128,7 @@ function toArray(fiber) {
 }
 
 
-function updateHostComponent(currentFiber) {
+export function updateHostComponent(currentFiber) {
     let newFiber, element = currentFiber.props.children;
     if (!element) {
         return
@@ -137,7 +137,7 @@ function updateHostComponent(currentFiber) {
         let prevNode;
         element.forEach((ele, i) => {
             const firstEle = ele;
-            let newSiblingFiber = new FiberNode(firstEle.type);
+            let newSiblingFiber = new createFiber(tag.HostComponent,firstEle.type);
             newSiblingFiber.stateNode = document.createElement(firstEle.type);
             newSiblingFiber.return = currentFiber;
             newSiblingFiber.props = {
@@ -151,18 +151,22 @@ function updateHostComponent(currentFiber) {
             prevNode = newSiblingFiber;
         })
     } else {
-        newFiber = new FiberNode(element.type);
-        newFiber.stateNode = document.createElement(element.type);
-        newFiber.return = currentFiber;
-        console.log(element)
-        newFiber.props = {
-            children: element.props ? element.props.children : null
+        if(element.type) {
+            newFiber = new createFiber(tag.HostComponent,element.type);
+            newFiber.stateNode = document.createElement(element.type);
+            newFiber.return = currentFiber;
+            newFiber.props = {
+                children: element.props ? element.props.children : null
+            }
+        }
+        else{
+            newFiber = new createFiber(tag.HostComponent,null);
+            newFiber.stateNode = document.createTextNode(element);
+            newFiber.return = currentFiber;
+            newFiber.props = {}
         }
     }
-    differChildren(toArray(currentFiber.child), toArray(newFiber));
+    differChildren(fiberListToArray(currentFiber.child), fiberListToArray(newFiber));
     currentFiber.child = newFiber;
     return currentFiber.child;
 }
-
-
-export {updateHostComponent}

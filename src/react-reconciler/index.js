@@ -60,7 +60,7 @@ function performSyncWork() {
 
 function performAsyncWork(current, expirationTime) {
     recomputeCurrentRendererTime();
-    const update = updateQueue.shift();
+    const update =  updateQueue.shift();
     requestIdleCallback((deadline) => {
         return performWork(deadline, current, update), {
             timeout: currentRendererTime - expirationTime
@@ -88,7 +88,7 @@ function workLoop(deadline) {
     while (nextUnitOfWork && deadline.timeRemaining() > 0) {
         nextUnitOfWork = performUnitWork(nextUnitOfWork);
     }
-    console.log(workInProgress,9090)
+    console.log(workInProgress, 9090)
 }
 
 function performUnitWork(nextUnitOfWork) {
@@ -98,8 +98,8 @@ function performUnitWork(nextUnitOfWork) {
 function beginWork(currentFiber) {
     console.log(currentFiber)
     switch (currentFiber.tag) {
-       /* case tag.HostRoot://处理根节点
-            break;*/
+        /* case tag.HostRoot://处理根节点
+             break;*/
         default:
             return updateHostComponent(currentFiber);
 

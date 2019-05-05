@@ -3,11 +3,12 @@ import {
 } from "./ReactFiberExpirationTime"
 
 export default class FiberNode {
-    constructor(tag, pendingProps, key, mode) {
+    constructor(tag, type,pendingProps, key, mode) {
         // Instance
         this.tag = tag;
         this.key = key;
         this.stateNode = null;
+        this.type = type;
 
         // Fiber
         this.return = null;
@@ -28,6 +29,12 @@ export default class FiberNode {
 
     }
 }
+
+export function createFiber(tag,type, pendingProps, key, mode) {
+    return new FiberNode(tag, type,pendingProps, key, mode);
+};
+
 export const tag = {
+    HostComponent:1,
     HostRoot: 3
 }
