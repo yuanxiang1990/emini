@@ -96,9 +96,9 @@ function performUnitWork(nextUnitOfWork) {
 }
 
 function beginWork(currentFiber) {
-    console.log(currentFiber)
     switch (currentFiber.tag) {
         /* case tag.HostRoot://处理根节点
+             updateHost(currentFiber);
              break;*/
         default:
             return updateHostComponent(currentFiber);

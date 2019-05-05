@@ -1,4 +1,4 @@
-import {tag,createFiber} from "./FiberNode";
+import {tag, createFiber} from "./FiberNode";
 
 /**
  * effect tag
@@ -130,14 +130,43 @@ function fiberListToArray(fiber) {
 
 export function updateHostComponent(currentFiber) {
     let newFiber, element = currentFiber.props.children;
+    /**
+     * 无子节点的情况
+     */
     if (!element) {
-        return
+        const sibling = currentFiber.sibling;
+        if (sibling) {
+            //继续向右遍历
+            return sibling;
+        }
+        /**
+         * 需要向上回溯
+         */
+        else {
+            let topFiber = currentFiber.return;
+            while (topFiber.tag !== tag.HostRoot) {
+                console.log(topFiber)
+                if (topFiber.sibling) {
+                    return topFiber.sibling
+                }
+                else {
+                    topFiber = topFiber.return;
+                }
+            }
+            return null;
+        }
     }
+    /**
+     * 子节点为多个
+     */
     if (Array.isArray(element) && element.length > 0) {
         let prevNode;
+        /**
+         * 构建子节点链
+         */
         element.forEach((ele, i) => {
             const firstEle = ele;
-            let newSiblingFiber = new createFiber(tag.HostComponent,firstEle.type);
+            let newSiblingFiber = new createFiber(tag.HostComponent, firstEle.type);
             newSiblingFiber.stateNode = document.createElement(firstEle.type);
             newSiblingFiber.return = currentFiber;
             newSiblingFiber.props = {
@@ -150,23 +179,27 @@ export function updateHostComponent(currentFiber) {
             }
             prevNode = newSiblingFiber;
         })
-    } else {
-        if(element.type) {
-            newFiber = new createFiber(tag.HostComponent,element.type);
+    }
+    else {//子节点为单个
+        if (element.type) {//为dom节点
+            newFiber = new createFiber(tag.HostComponent, element.type);
             newFiber.stateNode = document.createElement(element.type);
             newFiber.return = currentFiber;
             newFiber.props = {
                 children: element.props ? element.props.children : null
             }
         }
-        else{
-            newFiber = new createFiber(tag.HostComponent,null);
+        else {//为文本节点
+            newFiber = new createFiber(tag.HostComponent, null);
             newFiber.stateNode = document.createTextNode(element);
             newFiber.return = currentFiber;
             newFiber.props = {}
         }
     }
+    /**
+     * 子节点differ算法
+     */
     differChildren(fiberListToArray(currentFiber.child), fiberListToArray(newFiber));
-    currentFiber.child = newFiber;
+    currentFiber.child = newFiber;//链接新节点到workInprogress树
     return currentFiber.child;
 }
