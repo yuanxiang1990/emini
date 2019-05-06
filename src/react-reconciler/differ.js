@@ -183,32 +183,12 @@ export function updateHostComponent(currentFiber) {
      * 无子节点的情况
      */
     if (!element) {
-        const sibling = currentFiber.sibling;
-        if (sibling) {
-            //继续向右遍历
-            return sibling;
-        }
-        /**
-         * 需要向上回溯
-         */
-        else {
-            let topFiber = currentFiber.return;
-            while (topFiber.tag !== tag.HostRoot) {
-                if (topFiber.sibling) {
-                    return topFiber.sibling
-                }
-                else {
-                    topFiber = topFiber.return;
-                }
-            }
-            return null;
-        }
+        return null;
     }
     newFiber = createFiberFromElement(currentFiber, element)
     /**
      * 子节点differ算法
      */
     differChildren(fiberListToArray(currentFiber.child), fiberListToArray(newFiber));
-    currentFiber.child = newFiber;//链接新节点到workInprogress树
-    return currentFiber.child;
+    return currentFiber.child = newFiber;//链接新节点到workInprogress树
 }

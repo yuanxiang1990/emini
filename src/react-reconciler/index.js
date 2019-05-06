@@ -12,7 +12,7 @@ import {
     computeAsyncExpiration
 } from "./ReactFiberExpirationTime.js"
 import FiberNode, {tag} from "./FiberNode";
-import {updateHostComponent} from "./differ";
+import {updateHostComponent, Effect} from "./differ";
 
 let isRendering = false;
 let currentSchedulerTime = maxSigned31BitInt - Date.now();
@@ -27,6 +27,8 @@ const updateQueue = [];//更新队列
 let workInProgress = null;//当前工作树
 let nextUnitOfWork;//下一工作单元的任务
 let root = null;//当前fiber tree
+let pendingCommit;
+
 function updateContainer(children, containerFiberRoot) {
     root = containerFiberRoot;
     let currentTime = requestCurrentTime();
@@ -60,7 +62,7 @@ function performSyncWork() {
 
 function performAsyncWork(current, expirationTime) {
     recomputeCurrentRendererTime();
-    const update =  updateQueue.shift();
+    const update = updateQueue.shift();
     requestIdleCallback((deadline) => {
         return performWork(deadline, current, update), {
             timeout: currentRendererTime - expirationTime
@@ -82,17 +84,63 @@ function performWork(deadline, current, update) {
             }
         })
     }
+    console.log(pendingCommit, 0)
+    commitAllWork(pendingCommit);
+}
+
+/**
+ * 进入commit阶段
+ */
+function commitAllWork(topFiber) {
+    topFiber.effects.forEach(fiber => {
+        if (fiber.effectTag === Effect.PLACEMENT) {
+            fiber.return.stateNode.appendChild(fiber.stateNode);
+        }
+    })
 }
 
 function workLoop(deadline) {
     while (nextUnitOfWork && deadline.timeRemaining() > 0) {
         nextUnitOfWork = performUnitWork(nextUnitOfWork);
     }
-    console.log(workInProgress, 9090)
+
 }
 
+
 function performUnitWork(nextUnitOfWork) {
-    return beginWork(nextUnitOfWork);
+    const nextChild = beginWork(nextUnitOfWork);
+    if (nextChild) return nextChild;
+    const currentFiber = nextUnitOfWork;
+
+    let topFiber = currentFiber;
+    while (topFiber) {
+        completeWork(topFiber);
+        if (topFiber.sibling) {
+            return topFiber.sibling
+        }
+        else {
+            topFiber = topFiber.return;
+        }
+    }
+    return null;
+
+}
+
+/**
+ * 搜集节点变更到根节点
+ * @param currentFiber
+ */
+function completeWork(currentFiber) {
+    if (currentFiber.return) {
+        const currentEffect = currentFiber.effects || [] //收集当前节点的 effect list
+        const currentEffectTag = currentFiber.effectTag ? [currentFiber] : []
+        const parentEffects = currentFiber.return.effects || []
+        currentFiber.return.effects = parentEffects.concat(currentEffect, currentEffectTag)
+    } else {
+        // 到达最顶端了
+        pendingCommit = currentFiber
+    }
+
 }
 
 function beginWork(currentFiber) {

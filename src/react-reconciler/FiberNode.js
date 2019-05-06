@@ -21,7 +21,7 @@ export default class FiberNode {
 
         // Effects
         // this.effectTag = NoEffect;
-        this.effect = [];
+        this.effects = [];
         this.effectTag = null;
         this.expirationTime = NoWork;
 
