@@ -25,7 +25,7 @@ let isCommitting = false;
 let isBatchingInteractiveUpdates = false;//是否高优先级更新，如用户交互等
 const updateQueue = [];//更新队列
 let workInProgress = null;//当前工作树
-let nextUnitOfWork;//下一工作单元的任务
+let nextUnitOfWork = null;//下一工作单元的任务
 let root = null;//当前fiber tree
 let pendingCommit;
 
@@ -71,21 +71,27 @@ function performAsyncWork(current, expirationTime) {
 }
 
 function performWork(deadline, current, update) {
-    workInProgress = createWorkInProgress(current, update);
-    nextUnitOfWork = workInProgress;
+    if(nextUnitOfWork==null) {
+        workInProgress = createWorkInProgress(current, update);
+        nextUnitOfWork = workInProgress;
+    }
     workLoop(deadline);
     recomputeCurrentRendererTime();
     let expirationTime = workInProgress.expirationTime;
     //继续处理回调
     if (nextUnitOfWork && currentRendererTime > expirationTime) {
+        console.log(nextUnitOfWork,1)
         requestIdleCallback((deadline) => {
-            return performWork(deadline, current, update), {
+             performWork(deadline, nextUnitOfWork, update), {
                 timeout: currentRendererTime - expirationTime
             }
         })
     }
-    console.log(pendingCommit, 0)
-    commitAllWork(pendingCommit);
+    else {
+        console.log(pendingCommit, 0)
+        commitAllWork(pendingCommit);
+    }
+
 }
 
 /**
@@ -97,6 +103,9 @@ function commitAllWork(topFiber) {
             fiber.return.stateNode.appendChild(fiber.stateNode);
         }
     })
+    //topFiber.effects = [];
+    pendingCommit = null;
+    root = workInProgress;
 }
 
 function workLoop(deadline) {
@@ -164,7 +173,7 @@ function createWorkInProgress(current, update) {
         workInProgress.expirationTime = current.expirationTime;
         current.alternate = workInProgress;
     } else {
-        workInProgress.effect = [];
+        workInProgress.effects = [];
     }
     return workInProgress;
 }
