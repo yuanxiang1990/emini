@@ -89,6 +89,7 @@ function differChildren(oldChildren, newChildren) {
     // 记录remove操作
     function remove(item) {
         item.effectTag = Effect.DELETION;
+        item.return.effects.push(item);
     }
 
     // 记录insert操作
@@ -144,11 +145,23 @@ function createFiberFromElement(currentFiber, element) {
          * 构建子节点链
          */
         element.forEach((ele, i) => {
-            let newSiblingFiber = new createFiber(tag.HostComponent, ele.type);
-            newSiblingFiber.stateNode = document.createElement(ele.type);
+            let newSiblingFiber
+            if (typeof ele.type === "function") {
+                newSiblingFiber = new createFiber(tag.ClassComponent, ele.type);
+                newSiblingFiber.stateNode = new ele.type(ele.props);
+            }
+            else if ((typeof ele.type === "undefined")) {
+                newSiblingFiber = new createFiber(tag.HostComponent, ele.type);
+                newSiblingFiber.stateNode = document.createTextNode(ele);
+            }
+            else {
+                newSiblingFiber = new createFiber(tag.HostComponent, ele.type);
+                newSiblingFiber.stateNode = document.createElement(ele.type);
+            }
+            newSiblingFiber.key = element.key;
             newSiblingFiber.return = currentFiber;
             newSiblingFiber.props = {
-                children: ele.props.children
+                children: ele.props && ele.props.children
             }
             if (i === 0) {
                 newFiber = newSiblingFiber;
@@ -162,7 +175,6 @@ function createFiberFromElement(currentFiber, element) {
         if (element.type) {//为dom节点
             newFiber = new createFiber(tag.HostComponent, element.type);
             newFiber.stateNode = document.createElement(element.type);
-            newFiber.return = currentFiber;
             newFiber.props = {
                 children: element.props ? element.props.children : null
             }
@@ -170,10 +182,12 @@ function createFiberFromElement(currentFiber, element) {
         else {//为文本节点
             newFiber = new createFiber(tag.HostComponent, null);
             newFiber.stateNode = document.createTextNode(element);
-            newFiber.return = currentFiber;
             newFiber.props = {}
         }
+        newFiber.return = currentFiber;
+        newFiber.key = element.key;
     }
+
     return newFiber;
 }
 
@@ -184,6 +198,20 @@ export function updateHostComponent(currentFiber) {
      */
     if (!element) {
         return null;
+    }
+    newFiber = createFiberFromElement(currentFiber, element)
+    /**
+     * 子节点differ算法
+     */
+    differChildren(fiberListToArray(currentFiber.child), fiberListToArray(newFiber));
+    return currentFiber.child = newFiber;//链接新节点到workInprogress树
+}
+
+
+export function updateClassComponent(currentFiber) {
+    let newFiber, element = currentFiber.stateNode.render();
+    currentFiber.props = {
+        children: element
     }
     newFiber = createFiberFromElement(currentFiber, element)
     /**

@@ -12,7 +12,7 @@ import {
     computeAsyncExpiration
 } from "./ReactFiberExpirationTime.js"
 import FiberNode, {tag} from "./FiberNode";
-import {updateHostComponent, Effect} from "./differ";
+import {updateHostComponent, updateClassComponent, Effect} from "./differ";
 
 let isRendering = false;
 let currentSchedulerTime = maxSigned31BitInt - Date.now();
@@ -71,7 +71,7 @@ function performAsyncWork(current, expirationTime) {
 }
 
 function performWork(deadline, current, update) {
-    if(nextUnitOfWork==null) {
+    if (nextUnitOfWork == null) {
         workInProgress = createWorkInProgress(current, update);
         nextUnitOfWork = workInProgress;
     }
@@ -80,9 +80,9 @@ function performWork(deadline, current, update) {
     let expirationTime = workInProgress.expirationTime;
     //继续处理回调
     if (nextUnitOfWork && currentRendererTime > expirationTime) {
-        console.log(nextUnitOfWork,1)
+        console.log(nextUnitOfWork, 1)
         requestIdleCallback((deadline) => {
-             performWork(deadline, nextUnitOfWork, update), {
+            performWork(deadline, nextUnitOfWork, update), {
                 timeout: currentRendererTime - expirationTime
             }
         })
@@ -99,20 +99,27 @@ function performWork(deadline, current, update) {
  */
 function commitAllWork(topFiber) {
     topFiber.effects.forEach(fiber => {
+        if (fiber.tag === tag.ClassComponent) {
+            return;
+        }
+        let domParent = fiber.return;
+        while (domParent.tag === tag.ClassComponent) {//class类型组件
+            domParent = domParent.return;
+        }
         if (fiber.effectTag === Effect.PLACEMENT) {
-            fiber.return.stateNode.appendChild(fiber.stateNode);
+            domParent.stateNode.appendChild(fiber.stateNode);
         }
     })
     //topFiber.effects = [];
     pendingCommit = null;
     root = workInProgress;
+    console.log(root, 121)
 }
 
 function workLoop(deadline) {
     while (nextUnitOfWork && deadline.timeRemaining() > 0) {
         nextUnitOfWork = performUnitWork(nextUnitOfWork);
     }
-
 }
 
 
@@ -154,11 +161,12 @@ function completeWork(currentFiber) {
 
 function beginWork(currentFiber) {
     switch (currentFiber.tag) {
-        /* case tag.HostRoot://处理根节点
-             updateHost(currentFiber);
-             break;*/
-        default:
+        case tag.ClassComponent: {//处理class类型组件
+            return updateClassComponent(currentFiber);
+        }
+        default: {
             return updateHostComponent(currentFiber);
+        }
 
     }
 }

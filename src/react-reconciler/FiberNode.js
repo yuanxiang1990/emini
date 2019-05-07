@@ -36,5 +36,6 @@ export function createFiber(tag,type, pendingProps, key, mode) {
 
 export const tag = {
     HostComponent:1,
+    ClassComponent:2,
     HostRoot: 3
 }
