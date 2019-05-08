@@ -2,34 +2,44 @@ import ReactDom from "./src/react-dom";
 import React from "./src/react";
 import {Component} from "./src/react/ReactComponent";
 
-class Test extends Component {
+class A extends Component {
+    constructor() {
+        super();
+        this.state = {
+            title: '呵呵',
+            list: []
+        }
+        setTimeout(() => {
+            this.setState({
+                title: '哈哈',
+                list: [1, 2, 3, 4, 5]
+            })
+        }, 1000)
+    }
+
+    render() {
+        return <div>
+           <ul>
+               {
+                   this.state.list.map((item)=><li>{item}</li>)
+               }
+           </ul>
+            {this.state.title}
+            </div>
+    }
+}
+
+class B extends Component {
     constructor() {
         super();
     }
 
     render() {
-        return <p>
-            <span>ttt</span><br/><span>sss</span><br/>aaa
-        </p>
+        return <A/>
     }
 }
 
+
 ReactDom.render(<div>
-    <Test/>
-    <div>
-        <ul>
-            <li>
-                <span>909999</span>
-            </li>
-            <li>
-                <span>12121</span>
-            </li>
-            <li>
-                <span>333</span>
-            </li>
-        </ul>
-    </div>
-    <div>
-        <span>121</span>
-    </div>
+    <A/>
 </div>, document.getElementById('main'));

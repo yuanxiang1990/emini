@@ -26,11 +26,36 @@ let isBatchingInteractiveUpdates = false;//是否高优先级更新，如用户�
 const updateQueue = [];//更新队列
 let workInProgress = null;//当前工作树
 let nextUnitOfWork = null;//下一工作单元的任务
-let root = null;//当前fiber tree
 let pendingCommit;
 
+/**
+ * class类型组件相关方法
+ * @type {{enqueueSetState: classComponentUpdater.enqueueSetState}}
+ */
+const classComponentUpdater = {
+    enqueueSetState: function (inst, payload) {
+        const fiber = inst._reactInternalFiber;
+        const currentTime = requestCurrentTime()
+        const expirationTime = computeExpirationForFiber(currentTime);
+        fiber.stateNode._partialState = payload;
+        const root = getRootFiber(fiber);
+        root.expirationTime = expirationTime;
+        return updateContainerAtExpirationTime(root, root.props.children, expirationTime)
+    }
+}
+
+function getRootFiber(fiber) {
+    let curFiber = fiber;
+    while (curFiber) {
+        if (!curFiber.return) {
+            return curFiber;
+        }
+        curFiber = curFiber.return;
+    }
+}
+
 function updateContainer(children, containerFiberRoot) {
-    root = containerFiberRoot;
+    let root = containerFiberRoot;
     let currentTime = requestCurrentTime();
     let expirationTime = computeExpirationForFiber(currentTime);
     root.expirationTime = expirationTime;
@@ -71,6 +96,8 @@ function performAsyncWork(current, expirationTime) {
 }
 
 function performWork(deadline, current, update) {
+    isWorking = true;
+    isRendering = true;
     if (nextUnitOfWork == null) {
         workInProgress = createWorkInProgress(current, update);
         nextUnitOfWork = workInProgress;
@@ -88,7 +115,7 @@ function performWork(deadline, current, update) {
         })
     }
     else {
-        console.log(pendingCommit, 0)
+        isRendering = false;
         commitAllWork(pendingCommit);
     }
 
@@ -98,6 +125,8 @@ function performWork(deadline, current, update) {
  * 进入commit阶段
  */
 function commitAllWork(topFiber) {
+    isCommitting = true;
+    console.log(topFiber.effects)
     topFiber.effects.forEach(fiber => {
         if (fiber.tag === tag.ClassComponent) {
             return;
@@ -109,11 +138,20 @@ function commitAllWork(topFiber) {
         if (fiber.effectTag === Effect.PLACEMENT) {
             domParent.stateNode.appendChild(fiber.stateNode);
         }
+        if(fiber.effectTag === Effect.DELETION){
+            try {
+                domParent.stateNode.removeChild(fiber.stateNode);
+            }
+            catch(e) {
+
+            }
+        }
     })
-    //topFiber.effects = [];
+    isCommitting = false;
+    isWorking = false;
+    topFiber.effects = [];
     pendingCommit = null;
-    root = workInProgress;
-    console.log(root, 121)
+    workInProgress = null;
 }
 
 function workLoop(deadline) {
@@ -148,7 +186,7 @@ function performUnitWork(nextUnitOfWork) {
  */
 function completeWork(currentFiber) {
     if (currentFiber.return) {
-        const currentEffect = currentFiber.effects || [] //收集当前节点的 effect list
+        const currentEffect = (currentFiber.effects) || [] //收集当前节点的 effect list
         const currentEffectTag = currentFiber.effectTag ? [currentFiber] : []
         const parentEffects = currentFiber.return.effects || []
         currentFiber.return.effects = parentEffects.concat(currentEffect, currentEffectTag)
@@ -160,8 +198,11 @@ function completeWork(currentFiber) {
 }
 
 function beginWork(currentFiber) {
+
     switch (currentFiber.tag) {
         case tag.ClassComponent: {//处理class类型组件
+            currentFiber.stateNode.updater = classComponentUpdater;
+            currentFiber.stateNode._reactInternalFiber = currentFiber;
             return updateClassComponent(currentFiber);
         }
         default: {
@@ -172,6 +213,7 @@ function beginWork(currentFiber) {
 }
 
 function createWorkInProgress(current, update) {
+    let workInProgress = current.alternate;
     if (workInProgress === null) {
         workInProgress = new FiberNode(current.tag);
         workInProgress.alternate = current;
@@ -182,7 +224,10 @@ function createWorkInProgress(current, update) {
         current.alternate = workInProgress;
     } else {
         workInProgress.effects = [];
+        workInProgress.child = current.child;
+        workInProgress.props = current.props;
     }
+
     return workInProgress;
 }
 

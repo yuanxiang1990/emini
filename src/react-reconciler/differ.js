@@ -43,8 +43,8 @@ function differChildren(oldChildren, newChildren) {
     for (var i = 0; i < oldCopy.length; i++) {
         var newNode = contains(newChildren, oldCopy[i]);
         if (!newNode) {
-            oldCopy.splice(i, 1);
             remove(oldCopy[i]);
+            oldCopy.splice(i, 1);
             i--;
         }
     }
@@ -68,8 +68,8 @@ function differChildren(oldChildren, newChildren) {
         }
         if (simulateArray[i]) {
             if (sameNode(simulateArray[i + 1], newItem)) {
-                simulateArray.splice(i, 1);
                 remove(simulateArray[i]);
+                simulateArray.splice(i, 1);
                 i++;
                 j++;
             } else {
@@ -172,20 +172,29 @@ function createFiberFromElement(currentFiber, element) {
         })
     }
     else {//子节点为单个
-        if (element.type) {//为dom节点
+        if (typeof element.type === "function") {
+            newFiber = new createFiber(tag.ClassComponent, element.type);
+            if(currentFiber.child){
+                newFiber = currentFiber.child
+            }
+            else{
+                newFiber.stateNode = new element.type(element.props);
+            }
+        }
+        else if (element.type) {//为dom节点
             newFiber = new createFiber(tag.HostComponent, element.type);
             newFiber.stateNode = document.createElement(element.type);
-            newFiber.props = {
-                children: element.props ? element.props.children : null
-            }
+
         }
         else {//为文本节点
             newFiber = new createFiber(tag.HostComponent, null);
             newFiber.stateNode = document.createTextNode(element);
-            newFiber.props = {}
+        }
+        newFiber.props = {
+            children: element.props ? element.props.children : null
         }
         newFiber.return = currentFiber;
-        newFiber.key = element.key;
+        newFiber.key = String(Math.random());
     }
 
     return newFiber;
@@ -199,7 +208,13 @@ export function updateHostComponent(currentFiber) {
     if (!element) {
         return null;
     }
-    newFiber = createFiberFromElement(currentFiber, element)
+
+    if (currentFiber.alternate === null || currentFiber.alternate.child === null) {
+        newFiber = createFiberFromElement(currentFiber, element)
+    }
+    else{
+        newFiber = currentFiber.child
+    }
     /**
      * 子节点differ算法
      */
@@ -209,11 +224,17 @@ export function updateHostComponent(currentFiber) {
 
 
 export function updateClassComponent(currentFiber) {
-    let newFiber, element = currentFiber.stateNode.render();
+    let newFiber, element;
+    if (currentFiber.stateNode._partialState) {
+        const state = currentFiber.stateNode.state;
+        currentFiber.stateNode.state = {...state, ...currentFiber.stateNode._partialState};
+
+    }
+    element = currentFiber.stateNode.render();
     currentFiber.props = {
         children: element
     }
-    newFiber = createFiberFromElement(currentFiber, element)
+    newFiber = createFiberFromElement(currentFiber, element);
     /**
      * 子节点differ算法
      */
