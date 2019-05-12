@@ -3,7 +3,7 @@ import {
 } from "./ReactFiberExpirationTime"
 
 export default class FiberNode {
-    constructor(tag, type,pendingProps, key, mode) {
+    constructor(tag, type,pendingProps, key) {
         // Instance
         this.tag = tag;
         this.key = key;
@@ -16,7 +16,7 @@ export default class FiberNode {
         this.sibling = null;
         this.index = 0;
 
-        this.props = null;
+        this.props = pendingProps;
 
 
         // Effects
@@ -27,11 +27,13 @@ export default class FiberNode {
 
         this.alternate = null;
 
+        this.queue = [];
+
     }
 }
 
-export function createFiber(tag,type, pendingProps, key, mode) {
-    return new FiberNode(tag, type,pendingProps, key, mode);
+export function createFiber(tag,type, pendingProps, key) {
+    return new FiberNode(tag, type,pendingProps, key);
 };
 
 export const tag = {

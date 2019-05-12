@@ -6,40 +6,34 @@ class A extends Component {
     constructor() {
         super();
         this.state = {
-            title: '呵呵',
-            list: []
+            title: 'hehehe',
+            list: [8,7,4,909090909090]
         }
+    }
+
+    componentDidMount() {
         setTimeout(() => {
             this.setState({
                 title: '哈哈',
                 list: [1, 2, 3, 4, 5]
             })
-        }, 1000)
+        }, 810)
+
     }
 
     render() {
         return <div>
-           <ul>
-               {
-                   this.state.list.map((item)=><li>{item}</li>)
-               }
-           </ul>
+            {<ul>
+                {
+                    this.state.list.map((item) => <li>{item}</li>)
+                }
+            </ul>}
             {this.state.title}
-            </div>
-    }
-}
-
-class B extends Component {
-    constructor() {
-        super();
-    }
-
-    render() {
-        return <A/>
+        </div>
     }
 }
 
 
-ReactDom.render(<div>
+ReactDom.render(
     <A/>
-</div>, document.getElementById('main'));
+    , document.getElementById('main'));

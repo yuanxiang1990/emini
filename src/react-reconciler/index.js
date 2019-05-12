@@ -40,7 +40,8 @@ const classComponentUpdater = {
         fiber.stateNode._partialState = payload;
         const root = getRootFiber(fiber);
         root.expirationTime = expirationTime;
-        return updateContainerAtExpirationTime(root, root.props.children, expirationTime)
+        console.log(root, 666)
+        return requestWork(root, expirationTime);
     }
 }
 
@@ -69,7 +70,7 @@ function updateContainerAtExpirationTime(currentFiber, element, expirationTime) 
 
 
 function scheduleWork(current, element, expirationTime) {
-    updateQueue.push(element);
+    current.queue.push(element)
     requestWork(current, expirationTime);
 }
 
@@ -81,25 +82,22 @@ function requestWork(current, expirationTime) {
     }
 }
 
-function performSyncWork() {
-
+function performSyncWork(current) {
+    performWork(null, current)
 }
 
 function performAsyncWork(current, expirationTime) {
     recomputeCurrentRendererTime();
-    const update = updateQueue.shift();
     requestIdleCallback((deadline) => {
-        return performWork(deadline, current, update), {
-            timeout: currentRendererTime - expirationTime
-        }
+        return performWork(deadline, current)
     })
 }
 
-function performWork(deadline, current, update) {
+function performWork(deadline, current) {
     isWorking = true;
     isRendering = true;
     if (nextUnitOfWork == null) {
-        workInProgress = createWorkInProgress(current, update);
+        workInProgress = createWorkInProgress(current);
         nextUnitOfWork = workInProgress;
     }
     workLoop(deadline);
@@ -109,7 +107,7 @@ function performWork(deadline, current, update) {
     if (nextUnitOfWork && currentRendererTime > expirationTime) {
         console.log(nextUnitOfWork, 1)
         requestIdleCallback((deadline) => {
-            performWork(deadline, nextUnitOfWork, update), {
+            performWork(deadline, nextUnitOfWork), {
                 timeout: currentRendererTime - expirationTime
             }
         })
@@ -117,6 +115,11 @@ function performWork(deadline, current, update) {
     else {
         isRendering = false;
         commitAllWork(pendingCommit);
+        commitLifeCycle(pendingCommit);
+        isCommitting = false;
+        isWorking = false;
+        pendingCommit = null;
+        //workInProgress = null;
     }
 
 }
@@ -126,7 +129,7 @@ function performWork(deadline, current, update) {
  */
 function commitAllWork(topFiber) {
     isCommitting = true;
-    console.log(topFiber.effects)
+    console.log(topFiber,9090)
     topFiber.effects.forEach(fiber => {
         if (fiber.tag === tag.ClassComponent) {
             return;
@@ -138,25 +141,41 @@ function commitAllWork(topFiber) {
         if (fiber.effectTag === Effect.PLACEMENT) {
             domParent.stateNode.appendChild(fiber.stateNode);
         }
-        if(fiber.effectTag === Effect.DELETION){
+        if (fiber.effectTag === Effect.DELETION) {
             try {
                 domParent.stateNode.removeChild(fiber.stateNode);
             }
-            catch(e) {
+            catch (e) {
 
             }
         }
     })
-    isCommitting = false;
-    isWorking = false;
-    topFiber.effects = [];
-    pendingCommit = null;
-    workInProgress = null;
+}
+
+function commitLifeCycle(topFiber) {
+    topFiber.effects.forEach(fiber => {
+        if (fiber.tag === tag.ClassComponent) {
+            const instance = fiber.stateNode;
+            const componentDidMount = instance.componentDidMount;
+
+            if (fiber.alternate === null) {
+                componentDidMount.call(instance);
+            }
+        }
+
+    })
 }
 
 function workLoop(deadline) {
-    while (nextUnitOfWork && deadline.timeRemaining() > 0) {
-        nextUnitOfWork = performUnitWork(nextUnitOfWork);
+    if (deadline) {
+        while (nextUnitOfWork && deadline.timeRemaining() > 0) {
+            nextUnitOfWork = performUnitWork(nextUnitOfWork);
+        }
+    }
+    else {
+        while (nextUnitOfWork) {
+            nextUnitOfWork = performUnitWork(nextUnitOfWork);
+        }
     }
 }
 
@@ -185,10 +204,11 @@ function performUnitWork(nextUnitOfWork) {
  * @param currentFiber
  */
 function completeWork(currentFiber) {
+
     if (currentFiber.return) {
         const currentEffect = (currentFiber.effects) || [] //收集当前节点的 effect list
-        const currentEffectTag = currentFiber.effectTag ? [currentFiber] : []
-        const parentEffects = currentFiber.return.effects || []
+        const currentEffectTag = (currentFiber.effectTag) ? [currentFiber] : []
+        const parentEffects = currentFiber.return.effects || [];
         currentFiber.return.effects = parentEffects.concat(currentEffect, currentEffectTag)
     } else {
         // 到达最顶端了
@@ -198,11 +218,9 @@ function completeWork(currentFiber) {
 }
 
 function beginWork(currentFiber) {
-
     switch (currentFiber.tag) {
         case tag.ClassComponent: {//处理class类型组件
             currentFiber.stateNode.updater = classComponentUpdater;
-            currentFiber.stateNode._reactInternalFiber = currentFiber;
             return updateClassComponent(currentFiber);
         }
         default: {
@@ -212,14 +230,14 @@ function beginWork(currentFiber) {
     }
 }
 
-function createWorkInProgress(current, update) {
+function createWorkInProgress(current) {
     let workInProgress = current.alternate;
     if (workInProgress === null) {
         workInProgress = new FiberNode(current.tag);
         workInProgress.alternate = current;
         workInProgress.stateNode = current.stateNode;
         workInProgress.props = current.props || {};
-        workInProgress.props.children = update;
+        workInProgress.props.children = current.queue.shift();
         workInProgress.expirationTime = current.expirationTime;
         current.alternate = workInProgress;
     } else {
