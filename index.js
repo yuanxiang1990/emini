@@ -7,17 +7,18 @@ class A extends Component {
         super();
         this.state = {
             title: 'hehehe',
-            list: [8,7,4,909090909090]
+            list: [8, 7, 4, 909090909090]
         }
     }
 
     componentDidMount() {
-        setTimeout(() => {
+        setTimeout(()=>{
             this.setState({
                 title: '哈哈',
                 list: [1, 2, 3, 4, 5]
             })
-        }, 810)
+        },1000)
+
 
     }
 
@@ -35,5 +36,7 @@ class A extends Component {
 
 
 ReactDom.render(
-    <A/>
+    <div>
+        <A/>
+    </div>
     , document.getElementById('main'));

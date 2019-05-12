@@ -68,9 +68,9 @@ function differChildren(currentFiber, newChildren) {
     while (j < newChildren.length) {
         var newItem = newChildren[j];
         if (sameNode(oldChildren[i], newChildren[j])) {
-            let fiber = createFiberFromElement(newItem);
+            let fiber = createFiberFromElement(newItem);//创建新的fiber节点
             fiber.stateNode = oldChildren[i].stateNode;
-            fiber.alternate = oldChildren[i] || null;
+            fiber.alternate = oldChildren[i] || null;//储存旧的节点
             fiber.return = currentFiber;
             if (!preFiber) {
                 newFirstFiber = fiber;
@@ -191,7 +191,7 @@ export function updateClassComponent(currentFiber) {
         currentFiber.stateNode.state = {...state, ...currentFiber.stateNode._partialState};
 
     }
-    element = currentFiber.stateNode.render();
+    element = currentFiber.stateNode.render();//获取最新的element
     oldFiber = currentFiber.child;
     /**
      * 子节点differ算法
