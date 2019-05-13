@@ -27,7 +27,7 @@ export default class FiberNode {
 
         this.alternate = null;
 
-        this.queue = [];
+        this.updateQueue = [];//更新队列
 
     }
 }

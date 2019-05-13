@@ -22,16 +22,6 @@ function sameNode(oldNode, newNode) {
     )
 }
 
-function contains(a, obj) {
-    var i = 0;
-    while (i < a.length) {
-        if (sameNode(a[i], obj)) {
-            return a[i];
-        }
-        i++;
-    }
-    return false;
-}
 
 function createFiberFromElement(element) {
     let newFiber;
@@ -72,6 +62,7 @@ function differChildren(currentFiber, newChildren) {
             fiber.stateNode = oldChildren[i].stateNode;
             fiber.alternate = oldChildren[i] || null;//储存旧的节点
             fiber.return = currentFiber;
+            fiber.updateQueue = oldChildren[i].updateQueue;
             if (!preFiber) {
                 newFirstFiber = fiber;
             }

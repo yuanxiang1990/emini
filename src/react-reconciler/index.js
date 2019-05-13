@@ -23,7 +23,6 @@ let nextRenderExpirationTime = NoWork;
 let isWorking = false;
 let isCommitting = false;
 let isBatchingInteractiveUpdates = false;//是否高优先级更新，如用户交互等
-const updateQueue = [];//更新队列
 let workInProgress = null;//当前工作树
 let nextUnitOfWork = null;//下一工作单元的任务
 let pendingCommit;
@@ -37,11 +36,16 @@ const classComponentUpdater = {
         const fiber = inst._reactInternalFiber;
         const currentTime = requestCurrentTime()
         const expirationTime = computeExpirationForFiber(currentTime);
-        fiber.stateNode._partialState = payload;
+        fiber.updateQueue.push({
+            payload
+        })
         const root = getRootFiber(fiber);
         root.expirationTime = expirationTime;
         console.log(root, 666)
-        return requestWork(root, expirationTime);
+        if (root.expirationTime > nextRenderExpirationTime) {
+            nextUnitOfWork = null;//当前任务优先级更高，直接打断之前的任务
+            requestWork(root, expirationTime);
+        }
     }
 }
 
@@ -60,17 +64,19 @@ function updateContainer(children, containerFiberRoot) {
     let currentTime = requestCurrentTime();
     let expirationTime = computeExpirationForFiber(currentTime);
     root.expirationTime = expirationTime;
-    return updateContainerAtExpirationTime(root, children, expirationTime)
+    root.updateQueue.push({
+        element: children
+    })
+    return updateContainerAtExpirationTime(root, expirationTime)
 }
 
-function updateContainerAtExpirationTime(currentFiber, element, expirationTime) {
+function updateContainerAtExpirationTime(currentFiber, expirationTime) {
     currentFiber.expirationTime = expirationTime;
-    scheduleWork(currentFiber, element, expirationTime)
+    scheduleWork(currentFiber, expirationTime)
 }
 
 
 function scheduleWork(current, element, expirationTime) {
-    current.queue.push(element)
     requestWork(current, expirationTime);
 }
 
@@ -99,7 +105,9 @@ function performWork(deadline, current) {
     if (nextUnitOfWork == null) {
         workInProgress = createWorkInProgress(current);
         nextUnitOfWork = workInProgress;
+        nextRenderExpirationTime = workInProgress.expirationTime;
     }
+
     workLoop(deadline);
     recomputeCurrentRendererTime();
     let expirationTime = workInProgress.expirationTime;
@@ -129,7 +137,7 @@ function performWork(deadline, current) {
  */
 function commitAllWork(topFiber) {
     isCommitting = true;
-    console.log(topFiber,9090)
+    console.log(topFiber, 9090)
     topFiber.effects.forEach(fiber => {
         if (fiber.tag === tag.ClassComponent) {
             return;
@@ -220,8 +228,20 @@ function completeWork(currentFiber) {
 function beginWork(currentFiber) {
     switch (currentFiber.tag) {
         case tag.ClassComponent: {//处理class类型组件
+            const update = currentFiber.updateQueue.shift();
+            console.log(update,222)
+            if (update) {
+                currentFiber.stateNode._partialState = update.payload;
+            }
             currentFiber.stateNode.updater = classComponentUpdater;
             return updateClassComponent(currentFiber);
+        }
+        case tag.HostRoot: {
+            const update = currentFiber.updateQueue.shift();
+            if (update) {
+                currentFiber.props.children = update.element;
+            }
+            return updateHostComponent(currentFiber);
         }
         default: {
             return updateHostComponent(currentFiber);
@@ -237,7 +257,6 @@ function createWorkInProgress(current) {
         workInProgress.alternate = current;
         workInProgress.stateNode = current.stateNode;
         workInProgress.props = current.props || {};
-        workInProgress.props.children = current.queue.shift();
         workInProgress.expirationTime = current.expirationTime;
         current.alternate = workInProgress;
     } else {
@@ -245,7 +264,7 @@ function createWorkInProgress(current) {
         workInProgress.child = current.child;
         workInProgress.props = current.props;
     }
-
+    workInProgress.updateQueue = current.updateQueue;
     return workInProgress;
 }
 

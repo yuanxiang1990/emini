@@ -12,13 +12,10 @@ class A extends Component {
     }
 
     componentDidMount() {
-        setTimeout(()=>{
-            this.setState({
-                title: '哈哈',
-                list: [1, 2, 3, 4, 5]
-            })
-        },1000)
-
+        this.setState({
+            title: '哈哈',
+            list: [1, 2, 3, 4, 5]
+        })
 
     }
 
@@ -37,6 +34,7 @@ class A extends Component {
 
 ReactDom.render(
     <div>
+        <A/>
         <A/>
     </div>
     , document.getElementById('main'));
