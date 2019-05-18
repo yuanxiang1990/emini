@@ -63,6 +63,7 @@ function differChildren(currentFiber, newChildren) {
             fiber.alternate = oldChildren[i] || null;//储存旧的节点
             fiber.return = currentFiber;
             fiber.updateQueue = oldChildren[i].updateQueue;
+            fiber.stateNode._reactInternalFiber = fiber;
             if (!preFiber) {
                 newFirstFiber = fiber;
             }
@@ -180,6 +181,7 @@ export function updateClassComponent(currentFiber) {
     if (currentFiber.stateNode._partialState) {
         const state = currentFiber.stateNode.state;
         currentFiber.stateNode.state = {...state, ...currentFiber.stateNode._partialState};
+        currentFiber.stateNode._partialState = null;
 
     }
     element = currentFiber.stateNode.render();//获取最新的element

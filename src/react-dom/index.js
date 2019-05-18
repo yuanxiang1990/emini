@@ -15,6 +15,8 @@ const ReactDom = {
     render(element, container, callback) {
         const root = createHostRootFiber();
         root.stateNode = container;
+        root.nextScheduledRoot = null;//下一个需要执行的root
+        root.alternate = null;
         updateContainer(element, root);
     }
 };

@@ -13,8 +13,9 @@ import {
 } from "./ReactFiberExpirationTime.js"
 import FiberNode, {tag} from "./FiberNode";
 import {updateHostComponent, updateClassComponent, Effect} from "./differ";
+import {isEmptyObject} from "../utils/index";
 
-let isRendering = false;
+let isRendering = false;//是否正在渲染包括reconcile阶段和commit阶段
 let currentSchedulerTime = maxSigned31BitInt - Date.now();
 let nextFlushedExpirationTime = NoWork;
 let currentRendererTime = msToExpirationTime(originalStartTimeMs);
@@ -26,7 +27,10 @@ let isBatchingInteractiveUpdates = false;//是否高优先级更新，如用户�
 let workInProgress = null;//当前工作树
 let nextUnitOfWork = null;//下一工作单元的任务
 let pendingCommit;
-
+let lastScheduledRoot = null;
+let firstScheduledRoot = null;
+let nextFlushedRoot = null;
+const rootQueue = [];
 /**
  * class类型组件相关方法
  * @type {{enqueueSetState: classComponentUpdater.enqueueSetState}}
@@ -34,18 +38,17 @@ let pendingCommit;
 const classComponentUpdater = {
     enqueueSetState: function (inst, payload) {
         const fiber = inst._reactInternalFiber;
-        const currentTime = requestCurrentTime()
+        const currentTime = requestCurrentTime();
+        console.log(currentTime)
         const expirationTime = computeExpirationForFiber(currentTime);
         fiber.updateQueue.push({
             payload
         })
+        console.log(payload)
         const root = getRootFiber(fiber);
+        console.log(root, 66666)
         root.expirationTime = expirationTime;
-        console.log(root, 666)
-        if (root.expirationTime > nextRenderExpirationTime) {
-            nextUnitOfWork = null;//当前任务优先级更高，直接打断之前的任务
-            requestWork(root, expirationTime);
-        }
+        scheduleWork(root, expirationTime);
     }
 }
 
@@ -76,34 +79,83 @@ function updateContainerAtExpirationTime(currentFiber, expirationTime) {
 }
 
 
-function scheduleWork(current, element, expirationTime) {
-    requestWork(current, expirationTime);
+function scheduleWork(root, expirationTime) {
+    requestWork(root, expirationTime);
 }
 
-function requestWork(current, expirationTime) {
+function requestWork(root, expirationTime) {
+    addRootToSchedule(root, expirationTime);
+    if (isRendering) {
+        //当前正在渲染时先不执行，最后一次再一起执行
+        return
+    }
     if (expirationTime === Sync) {
-        performSyncWork(current);
+        performSyncWork(root);
     } else {
-        performAsyncWork(current, expirationTime);
+        performAsyncWork(root, expirationTime);
     }
 }
 
-function performSyncWork(current) {
-    performWork(null, current)
+function addRootToSchedule(root, expirationTime) {
+    let isAdd = false;
+    for (let i = 0, len = rootQueue.length; i < len; i++) {
+        if (rootQueue[i] === root) {
+            if (expirationTime > rootQueue[i].expirationTime) {
+                rootQueue[i].expirationTime = expirationTime;
+            }
+            isAdd = true;
+            break
+        }
+    }
+    if (!isAdd) {
+        rootQueue.push(root);
+    }
 }
 
-function performAsyncWork(current, expirationTime) {
+
+function findHighestPriorityRoot() {
+    let highestPriorityWork = NoWork;
+    let highestPriorityRoot = null;
+    for (let i = 0, len = rootQueue.length; i < len; i++) {
+        if (rootQueue[i].expirationTime !== NoWork) {
+            if (rootQueue[i].expirationTime > highestPriorityWork) {
+                highestPriorityRoot = rootQueue[i];
+                highestPriorityWork = highestPriorityRoot.expirationTime;
+            }
+            if (highestPriorityWork === Sync) {
+                break
+            }
+
+        }
+    }
+    nextFlushedRoot = highestPriorityRoot;
+    nextFlushedExpirationTime = highestPriorityWork;
+}
+
+function performSyncWork(root) {
+    performWork(null, root)
+}
+
+function performAsyncWork(root, expirationTime) {
     recomputeCurrentRendererTime();
     requestIdleCallback((deadline) => {
-        return performWork(deadline, current)
+        return performWork(deadline, root)
     })
 }
 
-function performWork(deadline, current) {
+function performWork(deadline, root) {
+    findHighestPriorityRoot();
+    while (nextFlushedRoot !== null && nextFlushedExpirationTime !== NoWork) {
+        performWorkOnRoot(deadline, nextFlushedRoot);
+        findHighestPriorityRoot();
+    }
+}
+
+function performWorkOnRoot(deadline, root) {
     isWorking = true;
     isRendering = true;
     if (nextUnitOfWork == null) {
-        workInProgress = createWorkInProgress(current);
+        workInProgress = createWorkInProgress(root);
         nextUnitOfWork = workInProgress;
         nextRenderExpirationTime = workInProgress.expirationTime;
     }
@@ -113,23 +165,22 @@ function performWork(deadline, current) {
     let expirationTime = workInProgress.expirationTime;
     //继续处理回调
     if (nextUnitOfWork && currentRendererTime > expirationTime) {
-        console.log(nextUnitOfWork, 1)
         requestIdleCallback((deadline) => {
-            performWork(deadline, nextUnitOfWork), {
-                timeout: currentRendererTime - expirationTime
-            }
+            performWorkOnRoot(deadline, nextUnitOfWork)
         })
     }
     else {
-        isRendering = false;
         commitAllWork(pendingCommit);
         commitLifeCycle(pendingCommit);
         isCommitting = false;
+        isRendering = false;
         isWorking = false;
         pendingCommit = null;
+        nextRenderExpirationTime = NoWork;
+        root.expirationTime = NoWork;
+        console.log(111)
         //workInProgress = null;
     }
-
 }
 
 /**
@@ -137,7 +188,6 @@ function performWork(deadline, current) {
  */
 function commitAllWork(topFiber) {
     isCommitting = true;
-    console.log(topFiber, 9090)
     topFiber.effects.forEach(fiber => {
         if (fiber.tag === tag.ClassComponent) {
             return;
@@ -161,14 +211,20 @@ function commitAllWork(topFiber) {
 }
 
 function commitLifeCycle(topFiber) {
-    topFiber.effects.forEach(fiber => {
+    topFiber.effects.forEach((fiber, i) => {
         if (fiber.tag === tag.ClassComponent) {
             const instance = fiber.stateNode;
             const componentDidMount = instance.componentDidMount;
 
             if (fiber.alternate === null) {
-                componentDidMount.call(instance);
+                if (typeof componentDidMount === "function") {
+                    componentDidMount.call(instance);
+                }
             }
+            else {
+                console.log('update')
+            }
+
         }
 
     })
@@ -176,7 +232,7 @@ function commitLifeCycle(topFiber) {
 
 function workLoop(deadline) {
     if (deadline) {
-        while (nextUnitOfWork && deadline.timeRemaining() > 0) {
+        while (nextUnitOfWork && !deadline.didTimeout) {
             nextUnitOfWork = performUnitWork(nextUnitOfWork);
         }
     }
@@ -218,6 +274,7 @@ function completeWork(currentFiber) {
         const currentEffectTag = (currentFiber.effectTag) ? [currentFiber] : []
         const parentEffects = currentFiber.return.effects || [];
         currentFiber.return.effects = parentEffects.concat(currentEffect, currentEffectTag)
+        currentFiber.effects.length = 0;
     } else {
         // 到达最顶端了
         pendingCommit = currentFiber
@@ -228,10 +285,13 @@ function completeWork(currentFiber) {
 function beginWork(currentFiber) {
     switch (currentFiber.tag) {
         case tag.ClassComponent: {//处理class类型组件
-            const update = currentFiber.updateQueue.shift();
-            console.log(update,222)
-            if (update) {
+            let update = {};
+            currentFiber.updateQueue.forEach(item => {
+                update = Object.assign(update, item);
+            })
+            if (!isEmptyObject(update)) {
                 currentFiber.stateNode._partialState = update.payload;
+                currentFiber.effectTag = Effect.UPDATE;
             }
             currentFiber.stateNode.updater = classComponentUpdater;
             return updateClassComponent(currentFiber);
@@ -274,6 +334,7 @@ function requestCurrentTime() {
         // We're already rendering. Return the most recently read time.
         return currentSchedulerTime;
     }
+
     if (nextFlushedExpirationTime === NoWork || nextFlushedExpirationTime === Never) {
         // If there's no pending work, or if the pending work is offscreen, we can
         // read the current time without risk of tearing.
