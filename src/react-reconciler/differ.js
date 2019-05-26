@@ -17,9 +17,7 @@ function sameNode(oldNode, newNode) {
     if (typeof oldNode.type === 'undefined' && typeof newNode.type === 'undefined') {
         return oldNode.stateNode.nodeValue == newNode;
     }
-    return (
-        oldNode && newNode && oldNode.type === newNode.type
-    )
+    return oldNode && newNode && oldNode.type === newNode.type;
 }
 
 
@@ -53,7 +51,6 @@ function createFiberFromElement(element) {
 function differChildren(currentFiber, newChildren) {
     let i = 0, j = 0;//i:simulate indx j:new array index
     let newFirstFiber, preFiber, oldChildren = fiberListToArray(currentFiber.alternate && currentFiber.alternate.child);
-
     newChildren = !Array.isArray(newChildren) ? [newChildren] : newChildren;
     while (j < newChildren.length) {
         var newItem = newChildren[j];
@@ -79,8 +76,8 @@ function differChildren(currentFiber, newChildren) {
             if (sameNode(oldChildren[i + 1], newItem)) {
                 remove(oldChildren[i]);
                 oldChildren.splice(i, 1);
-                i++;
-                j++;
+                //i++;
+                //j++;
             } else {
                 oldChildren.splice(i, 0, newItem);
                 insert(j, newItem);
@@ -120,10 +117,14 @@ function differChildren(currentFiber, newChildren) {
             fiber.stateNode._reactInternalFiber = fiber;
         }
         else if (typeof item.type === "string") {
-            fiber.stateNode = document.createElement(item.type)
+            let stateNode = document.createElement(item.type);
+            stateNode.__reactInternalInstance = fiber;
+            fiber.stateNode = stateNode;
         }
         else {
-            fiber.stateNode = document.createTextNode(item)
+            let stateNode = document.createTextNode(item)
+            stateNode.__reactInternalInstance = fiber;
+            fiber.stateNode = stateNode;
         }
         fiber.return = currentFiber;
         if (preFiber) {
@@ -171,7 +172,6 @@ export function updateHostComponent(currentFiber) {
      */
     newFiber = differChildren(currentFiber, element);
     newFiber && (newFiber.child = (oldFiber ? oldFiber.child : null));
-
     return currentFiber.child = newFiber;//链接新节点到workInprogress树
 }
 

@@ -2,8 +2,8 @@ import {
     NoWork, Never, Sync, noTimeout, maxSigned31BitInt
 } from "./ReactFiberExpirationTime"
 
-export default class FiberNode {
-    constructor(tag, type,pendingProps, key) {
+export  class FiberNode {
+    constructor(tag, type, pendingProps, key) {
         // Instance
         this.tag = tag;
         this.key = key;
@@ -32,12 +32,22 @@ export default class FiberNode {
     }
 }
 
-export function createFiber(tag,type, pendingProps, key) {
-    return new FiberNode(tag, type,pendingProps, key);
+export function createFiber(tag, type, pendingProps, key) {
+    return new FiberNode(tag, type, pendingProps, key);
 };
 
+export function getRootFiber(fiber) {
+    let curFiber = fiber;
+    while (curFiber) {
+        if (!curFiber.return) {
+            return curFiber;
+        }
+        curFiber = curFiber.return;
+    }
+}
+
 export const tag = {
-    HostComponent:1,
-    ClassComponent:2,
+    HostComponent: 1,
+    ClassComponent: 2,
     HostRoot: 3
 }

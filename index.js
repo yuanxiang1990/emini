@@ -7,21 +7,25 @@ class A extends Component {
         super();
         this.state = {
             title: 'hehehe',
+            eventTitle: 'hahaha',
             list: [8, 7, 4, 909090909090]
         }
     }
 
-    componentDidMount() {
+    clickHandler = (e) => {
+        e.stopPropagation();
         this.setState({
-            title: '哈哈',
-            list: [1, 2, 3,4,5]
+            eventTitle: 'clickHandler'+Math.random()
         })
-        setTimeout(()=>{
+    }
+
+    componentDidMount() {
+        setInterval(() => {
             this.setState({
-                title: '呵呵',
-                list: [1,90909090]
+                title: Math.random(),
+                list: [1, 2, 3, 4, Math.random()]
             })
-        },900)
+        }, 0)
 
     }
 
@@ -32,7 +36,13 @@ class A extends Component {
                     this.state.list.map((item) => <li>{item}</li>)
                 }
             </ul>}
-            {this.state.title}
+            <div>
+                {this.state.title}
+            </div>
+            <a href="javascript:void(0)" onClick={this.clickHandler}>点击</a>
+            <div>
+                {this.state.eventTitle}
+            </div>
         </div>
     }
 }
@@ -40,8 +50,6 @@ class A extends Component {
 
 ReactDom.render(
     <div>
-        <A/>
-        <A/>
         <A/>
     </div>
     , document.getElementById('main'));

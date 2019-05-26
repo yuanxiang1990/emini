@@ -11,9 +11,10 @@ import {
     computeInteractiveExpiration,
     computeAsyncExpiration
 } from "./ReactFiberExpirationTime.js"
-import FiberNode, {tag} from "./FiberNode";
+import {tag, FiberNode, getRootFiber} from "./FiberNode";
 import {updateHostComponent, updateClassComponent, Effect} from "./differ";
 import {isEmptyObject} from "../utils/index";
+import {finalizeInitialFiber} from "../react-event"
 
 let isRendering = false;//是否正在渲染包括reconcile阶段和commit阶段
 let currentSchedulerTime = maxSigned31BitInt - Date.now();
@@ -27,8 +28,6 @@ let isBatchingInteractiveUpdates = false;//是否高优先级更新，如用户�
 let workInProgress = null;//当前工作树
 let nextUnitOfWork = null;//下一工作单元的任务
 let pendingCommit;
-let lastScheduledRoot = null;
-let firstScheduledRoot = null;
 let nextFlushedRoot = null;
 const rootQueue = [];
 /**
@@ -39,30 +38,24 @@ const classComponentUpdater = {
     enqueueSetState: function (inst, payload) {
         const fiber = inst._reactInternalFiber;
         const currentTime = requestCurrentTime();
-        console.log(currentTime)
         const expirationTime = computeExpirationForFiber(currentTime);
+        if (expirationTime > nextRenderExpirationTime) {//更高优先级任务到来时终止当前任务
+            nextUnitOfWork = null;
+            nextRenderExpirationTime = NoWork;
+        }
         fiber.updateQueue.push({
             payload
         })
-        console.log(payload)
         const root = getRootFiber(fiber);
-        console.log(root, 66666)
         root.expirationTime = expirationTime;
+        console.log(isBatchingInteractiveUpdates)
+        console.log(expirationTime)
         scheduleWork(root, expirationTime);
     }
 }
 
-function getRootFiber(fiber) {
-    let curFiber = fiber;
-    while (curFiber) {
-        if (!curFiber.return) {
-            return curFiber;
-        }
-        curFiber = curFiber.return;
-    }
-}
 
-function updateContainer(children, containerFiberRoot) {
+export function updateContainer(children, containerFiberRoot) {
     let root = containerFiberRoot;
     let currentTime = requestCurrentTime();
     let expirationTime = computeExpirationForFiber(currentTime);
@@ -178,7 +171,6 @@ function performWorkOnRoot(deadline, root) {
         pendingCommit = null;
         nextRenderExpirationTime = NoWork;
         root.expirationTime = NoWork;
-        console.log(111)
         //workInProgress = null;
     }
 }
@@ -188,6 +180,8 @@ function performWorkOnRoot(deadline, root) {
  */
 function commitAllWork(topFiber) {
     isCommitting = true;
+    console.log(topFiber, 8888);
+
     topFiber.effects.forEach(fiber => {
         if (fiber.tag === tag.ClassComponent) {
             return;
@@ -197,14 +191,19 @@ function commitAllWork(topFiber) {
             domParent = domParent.return;
         }
         if (fiber.effectTag === Effect.PLACEMENT) {
-            domParent.stateNode.appendChild(fiber.stateNode);
+            if (!fiber.sibling || fiber.sibling.effectTag === Effect.PLACEMENT) {
+                domParent.stateNode.appendChild(fiber.stateNode);
+            }
+            else {
+                domParent.stateNode.insertBefore(fiber.stateNode, fiber.sibling.stateNode);
+            }
         }
         if (fiber.effectTag === Effect.DELETION) {
             try {
                 domParent.stateNode.removeChild(fiber.stateNode);
             }
             catch (e) {
-
+                console.error(e);
             }
         }
     })
@@ -215,14 +214,16 @@ function commitLifeCycle(topFiber) {
         if (fiber.tag === tag.ClassComponent) {
             const instance = fiber.stateNode;
             const componentDidMount = instance.componentDidMount;
-
+            const componentDidUpdate = instance.componentDidUpdate;
             if (fiber.alternate === null) {
                 if (typeof componentDidMount === "function") {
                     componentDidMount.call(instance);
                 }
             }
             else {
-                console.log('update')
+                if (typeof componentDidUpdate === "function") {
+                    componentDidUpdate.call(instance);
+                }
             }
 
         }
@@ -245,10 +246,10 @@ function workLoop(deadline) {
 
 
 function performUnitWork(nextUnitOfWork) {
-    const nextChild = beginWork(nextUnitOfWork);
-    if (nextChild) return nextChild;
     const currentFiber = nextUnitOfWork;
-
+    const nextChild = beginWork(currentFiber);
+    finalizeInitialFiber(currentFiber, getRootFiber(currentFiber))
+    if (nextChild) return nextChild;
     let topFiber = currentFiber;
     while (topFiber) {
         completeWork(topFiber);
@@ -274,7 +275,6 @@ function completeWork(currentFiber) {
         const currentEffectTag = (currentFiber.effectTag) ? [currentFiber] : []
         const parentEffects = currentFiber.return.effects || [];
         currentFiber.return.effects = parentEffects.concat(currentEffect, currentEffectTag)
-        currentFiber.effects.length = 0;
     } else {
         // 到达最顶端了
         pendingCommit = currentFiber
@@ -283,6 +283,7 @@ function completeWork(currentFiber) {
 }
 
 function beginWork(currentFiber) {
+    currentFiber.effects.length = 0;
     switch (currentFiber.tag) {
         case tag.ClassComponent: {//处理class类型组件
             let update = {};
@@ -306,7 +307,6 @@ function beginWork(currentFiber) {
         default: {
             return updateHostComponent(currentFiber);
         }
-
     }
 }
 
@@ -374,5 +374,6 @@ function computeExpirationForFiber(currentTime) {
     return expirationTime
 }
 
-
-export {updateContainer}
+export function setBatchingInteractiveUpdates(val) {
+    isBatchingInteractiveUpdates = val;
+}
