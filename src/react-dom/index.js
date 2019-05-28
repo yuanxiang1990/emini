@@ -3,8 +3,8 @@ import {FiberNode} from "../react-reconciler/FiberNode";
 import {updateContainer} from "../react-reconciler/index"
 
 
-let createFiber = function (tag, pendingProps, key, mode) {
-    return new FiberNode(tag, pendingProps, key, mode);
+let createFiber = function (tag, type,pendingProps, key) {
+    return new FiberNode(tag,type, pendingProps, key);
 };
 
 function createHostRootFiber() {

@@ -48,8 +48,6 @@ const classComponentUpdater = {
         })
         const root = getRootFiber(fiber);
         root.expirationTime = expirationTime;
-        console.log(isBatchingInteractiveUpdates)
-        console.log(expirationTime)
         scheduleWork(root, expirationTime);
     }
 }
@@ -163,6 +161,7 @@ function performWorkOnRoot(deadline, root) {
         })
     }
     else {
+        commitPreLifeCycle(pendingCommit)
         commitAllWork(pendingCommit);
         commitLifeCycle(pendingCommit);
         isCommitting = false;
@@ -171,6 +170,7 @@ function performWorkOnRoot(deadline, root) {
         pendingCommit = null;
         nextRenderExpirationTime = NoWork;
         root.expirationTime = NoWork;
+        rootQueue.splice(rootQueue.indexOf(root), 1);
         //workInProgress = null;
     }
 }
@@ -180,7 +180,6 @@ function performWorkOnRoot(deadline, root) {
  */
 function commitAllWork(topFiber) {
     isCommitting = true;
-    console.log(topFiber, 8888);
 
     topFiber.effects.forEach(fiber => {
         if (fiber.tag === tag.ClassComponent) {
@@ -206,6 +205,30 @@ function commitAllWork(topFiber) {
                 console.error(e);
             }
         }
+        fiber.effectTag = null;
+    })
+    topFiber.effects = [];
+}
+
+function commitPreLifeCycle(topFiber) {
+    topFiber.effects.forEach((fiber, i) => {
+        if (fiber.tag === tag.ClassComponent) {
+            const instance = fiber.stateNode;
+            const UNSAFE_componentWillMount = instance.UNSAFE_componentWillMount;
+            const UNSAFE_componentWillUpdate = instance.UNSAFE_componentWillUpdate;
+            if (fiber.alternate === null) {
+                if (typeof UNSAFE_componentWillMount === "function") {
+                    UNSAFE_componentWillMount.call(instance);
+                }
+            }
+            else {
+                if (typeof UNSAFE_componentWillUpdate === "function") {
+                    UNSAFE_componentWillUpdate.call(instance, fiber.stateNode.props, fiber.stateNode.state);
+                }
+            }
+
+        }
+
     })
 }
 
@@ -222,7 +245,7 @@ function commitLifeCycle(topFiber) {
             }
             else {
                 if (typeof componentDidUpdate === "function") {
-                    componentDidUpdate.call(instance);
+                    componentDidUpdate.call(instance, fiber.alternate.stateNode.props, fiber.alternate.stateNode.state);
                 }
             }
 
@@ -266,51 +289,50 @@ function performUnitWork(nextUnitOfWork) {
 
 /**
  * 搜集节点变更到根节点
- * @param currentFiber
+ * @param workInProgress
  */
-function completeWork(currentFiber) {
-
-    if (currentFiber.return) {
-        const currentEffect = (currentFiber.effects) || [] //收集当前节点的 effect list
-        const currentEffectTag = (currentFiber.effectTag) ? [currentFiber] : []
-        const parentEffects = currentFiber.return.effects || [];
-        currentFiber.return.effects = parentEffects.concat(currentEffect, currentEffectTag)
+function completeWork(workInProgress) {
+    if (workInProgress.return) {
+        const currentEffect = (workInProgress.effects) || [] //收集当前节点的 effect list
+        const currentEffectTag = (workInProgress.effectTag) ? [workInProgress] : []
+        const parentEffects = workInProgress.return.effects || [];
+        workInProgress.return.effects = parentEffects.concat(currentEffect, currentEffectTag)
     } else {
         // 到达最顶端了
-        pendingCommit = currentFiber
+        pendingCommit = workInProgress
     }
 
 }
 
-function beginWork(currentFiber) {
-    currentFiber.effects.length = 0;
-    switch (currentFiber.tag) {
+function beginWork(workInProgress) {
+    workInProgress.effects.length = 0;
+    switch (workInProgress.tag) {
         case tag.ClassComponent: {//处理class类型组件
             let update = {};
-            currentFiber.updateQueue.forEach(item => {
-                update = Object.assign(update, item);
+            workInProgress.updateQueue.forEach(item => {
+                update = Object.assign(update, item.payload);
             })
             if (!isEmptyObject(update)) {
-                currentFiber.stateNode._partialState = update.payload;
-                currentFiber.effectTag = Effect.UPDATE;
+                workInProgress.stateNode._partialState = update;
+                workInProgress.effectTag = Effect.UPDATE;
             }
-            currentFiber.stateNode.updater = classComponentUpdater;
-            return updateClassComponent(currentFiber);
+            workInProgress.stateNode.updater = classComponentUpdater;
+            return updateClassComponent(workInProgress);
         }
         case tag.HostRoot: {
-            const update = currentFiber.updateQueue.shift();
+            const update = workInProgress.updateQueue.shift();
             if (update) {
-                currentFiber.props.children = update.element;
+                workInProgress.props.children = update.element;
             }
-            return updateHostComponent(currentFiber);
+            return updateHostComponent(workInProgress);
         }
         default: {
-            return updateHostComponent(currentFiber);
+            return updateHostComponent(workInProgress);
         }
     }
 }
 
-function createWorkInProgress(current) {
+export function createWorkInProgress(current) {
     let workInProgress = current.alternate;
     if (workInProgress === null) {
         workInProgress = new FiberNode(current.tag);
@@ -324,6 +346,7 @@ function createWorkInProgress(current) {
         workInProgress.child = current.child;
         workInProgress.props = current.props;
     }
+    workInProgress.expirationTime = current.expirationTime;
     workInProgress.updateQueue = current.updateQueue;
     return workInProgress;
 }

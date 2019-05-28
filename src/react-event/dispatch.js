@@ -3,7 +3,6 @@ import {SyntheticEvent} from "../events/SyntheticEvent";
 import {setBatchingInteractiveUpdates} from "../react-reconciler";
 
 export function dispatch(e) {
-    console.log(e)
     const nativeEventTarget = e.target || e.srcElement;
     const ancestors = [];
     let fiber = nativeEventTarget.__reactInternalInstance;
@@ -22,7 +21,6 @@ export function dispatch(e) {
         const eventName = 'on' + type[0].toLocaleUpperCase() + type.slice(1)
         const syntheticEvent = SyntheticEvent.getPooled(e);
         const handler = ancestor.props[eventName];
-        console.log(syntheticEvent)
         if (handler) {
             setBatchingInteractiveUpdates(true);
             handler.call(null, syntheticEvent);

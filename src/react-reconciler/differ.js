@@ -1,4 +1,5 @@
 import {tag, createFiber} from "./FiberNode";
+import {createWorkInProgress} from "./index";
 
 /**
  * effect tag
@@ -57,6 +58,7 @@ function differChildren(currentFiber, newChildren) {
         if (sameNode(oldChildren[i], newChildren[j])) {
             let fiber = createFiberFromElement(newItem);//创建新的fiber节点
             fiber.stateNode = oldChildren[i].stateNode;
+            oldChildren[i].effects.length = 0;
             fiber.alternate = oldChildren[i] || null;//储存旧的节点
             fiber.return = currentFiber;
             fiber.updateQueue = oldChildren[i].updateQueue;
@@ -111,9 +113,7 @@ function differChildren(currentFiber, newChildren) {
         fiber.effectTag = Effect.PLACEMENT;
         if (typeof item.type === "function") {
             fiber.stateNode = new item.type(item.props);
-            fiber.props = {
-                children: fiber.stateNode.render()
-            }
+            fiber.props.children = fiber.stateNode.render()
             fiber.stateNode._reactInternalFiber = fiber;
         }
         else if (typeof item.type === "string") {
@@ -157,7 +157,11 @@ function fiberListToArray(fiber) {
     return children
 }
 
-
+/**
+ * 普通dom组件更新
+ * @param currentFiber
+ * @returns {*}
+ */
 export function updateHostComponent(currentFiber) {
     let oldFiber, newFiber, element = currentFiber.props.children;
     /**
@@ -175,21 +179,52 @@ export function updateHostComponent(currentFiber) {
     return currentFiber.child = newFiber;//链接新节点到workInprogress树
 }
 
-
-export function updateClassComponent(currentFiber) {
+/**
+ * class类型组件更新
+ * @param workInProgress
+ * @returns {*}
+ */
+export function updateClassComponent(workInProgress) {
     let oldFiber, newFiber, element;
-    if (currentFiber.stateNode._partialState) {
-        const state = currentFiber.stateNode.state;
-        currentFiber.stateNode.state = {...state, ...currentFiber.stateNode._partialState};
-        currentFiber.stateNode._partialState = null;
+    let newState = Object.assign(workInProgress.stateNode.state || {}, workInProgress.stateNode._partialState || {});
+    let newProps = workInProgress.stateNode.props = workInProgress.props;
+    if (!checkShouldUpdate(workInProgress, newProps, newState)) {
+        cloneChildFibers(workInProgress);
+        return workInProgress.child;
+    }
+    if (workInProgress.stateNode._partialState) {
+        const state = workInProgress.stateNode.state;
+        workInProgress.stateNode.state = {...state, ...workInProgress.stateNode._partialState};
+        workInProgress.stateNode._partialState = null;
 
     }
-    element = currentFiber.stateNode.render();//获取最新的element
-    oldFiber = currentFiber.child;
+    element = workInProgress.stateNode.render();//获取最新的element
+    oldFiber = workInProgress.child;
     /**
      * 子节点differ算法
      */
-    newFiber = differChildren(currentFiber, element);
+    newFiber = differChildren(workInProgress, element);
     newFiber && (newFiber.child = (oldFiber ? oldFiber.child : null));
-    return currentFiber.child = newFiber;//链接新节点到workInprogress树
+    return workInProgress.child = newFiber;//链接新节点到workInprogress树
+}
+
+
+function checkShouldUpdate(workInProgress, newProps, newState) {
+    let instance = workInProgress.stateNode;
+    if (workInProgress.alternate && typeof instance.shouldComponentUpdate === "function") {
+        return instance.shouldComponentUpdate(newProps, newState);
+    }
+    return true;
+}
+
+
+function cloneChildFibers(workInProgress) {
+    if (workInProgress.child === null) {
+        return
+    }
+    let currentChild = workInProgress.child;
+    let newChild = createWorkInProgress(workInProgress.child);
+    newChild.return = workInProgress;
+    workInProgress.child = newChild;
+
 }
