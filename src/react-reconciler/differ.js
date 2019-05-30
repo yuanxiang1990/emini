@@ -113,7 +113,6 @@ function differChildren(currentFiber, newChildren) {
         fiber.effectTag = Effect.PLACEMENT;
         if (typeof item.type === "function") {
             fiber.stateNode = new item.type(item.props);
-            fiber.props.children = fiber.stateNode.render()
             fiber.stateNode._reactInternalFiber = fiber;
         }
         else if (typeof item.type === "string") {
@@ -185,20 +184,44 @@ export function updateHostComponent(currentFiber) {
  * @returns {*}
  */
 export function updateClassComponent(workInProgress) {
-    let oldFiber, newFiber, element;
-    let newState = Object.assign(workInProgress.stateNode.state || {}, workInProgress.stateNode._partialState || {});
-    let newProps = workInProgress.stateNode.props = workInProgress.props;
+    let oldFiber, newFiber, element, instance = workInProgress.stateNode;
+    let newState = Object.assign(instance.state || {}, instance._partialState || {});
+    let oldProps = instance.props;
+    let newProps = workInProgress.props;
+    const getDerivedStateFromProps = instance.constructor.getDerivedStateFromProps;
+    /**
+     * 实现getDerivedStateFromProps生命周期
+     */
+    if (typeof getDerivedStateFromProps === "function") {
+        const state = getDerivedStateFromProps(newProps, newState);
+        if (state) {
+            newState = Object.assign(newState, state);
+        }
+    }
+    /**
+     * 实现componentWillReceiveProps生命周期
+     * @type {boolean}
+     */
+    let hasNewLifecycles = typeof getDerivedStateFromProps === 'function' || typeof instance.getSnapshotBeforeUpdate === 'function';
+    if (!hasNewLifecycles && (typeof instance.UNSAFE_componentWillReceiveProps === 'function' || typeof instance.componentWillReceiveProps === 'function')) {
+        if (oldProps !== newProps && workInProgress.alternate) {
+            //父节点重新render后新创建的element的props和之前fiber的stateNode的props地址不一样！！！
+            callComponentWillReceiveProps(instance, newProps);
+        }
+    }
+    instance.props = newProps;
+    /**
+     * 处理shouldComponentUpdate生命周期
+     */
     if (!checkShouldUpdate(workInProgress, newProps, newState)) {
         cloneChildFibers(workInProgress);
         return workInProgress.child;
     }
-    if (workInProgress.stateNode._partialState) {
-        const state = workInProgress.stateNode.state;
-        workInProgress.stateNode.state = {...state, ...workInProgress.stateNode._partialState};
-        workInProgress.stateNode._partialState = null;
-
+    instance.state = newState;
+    if (instance._partialState) {
+        instance._partialState = null;
     }
-    element = workInProgress.stateNode.render();//获取最新的element
+    element = instance.render();//获取最新的element
     oldFiber = workInProgress.child;
     /**
      * 子节点differ算法
@@ -217,6 +240,14 @@ function checkShouldUpdate(workInProgress, newProps, newState) {
     return true;
 }
 
+function callComponentWillReceiveProps(instance, newProps) {
+    if (typeof instance.componentWillReceiveProps === 'function') {
+        instance.componentWillReceiveProps(newProps);
+    }
+    if (typeof instance.UNSAFE_componentWillReceiveProps === 'function') {
+        instance.UNSAFE_componentWillReceiveProps(newProps);
+    }
+}
 
 function cloneChildFibers(workInProgress) {
     if (workInProgress.child === null) {
@@ -226,5 +257,4 @@ function cloneChildFibers(workInProgress) {
     let newChild = createWorkInProgress(workInProgress.child);
     newChild.return = workInProgress;
     workInProgress.child = newChild;
-
 }

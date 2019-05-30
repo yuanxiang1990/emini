@@ -15,6 +15,7 @@ import {tag, FiberNode, getRootFiber} from "./FiberNode";
 import {updateHostComponent, updateClassComponent, Effect} from "./differ";
 import {isEmptyObject} from "../utils/index";
 import {finalizeInitialFiber} from "../react-event"
+import {commitAllWork} from "./commitWork";
 
 let isRendering = false;//是否正在渲染包括reconcile阶段和commit阶段
 let currentSchedulerTime = maxSigned31BitInt - Date.now();
@@ -161,9 +162,8 @@ function performWorkOnRoot(deadline, root) {
         })
     }
     else {
-        commitPreLifeCycle(pendingCommit)
+        isCommitting = true;
         commitAllWork(pendingCommit);
-        commitLifeCycle(pendingCommit);
         isCommitting = false;
         isRendering = false;
         isWorking = false;
@@ -175,84 +175,6 @@ function performWorkOnRoot(deadline, root) {
     }
 }
 
-/**
- * 进入commit阶段
- */
-function commitAllWork(topFiber) {
-    isCommitting = true;
-
-    topFiber.effects.forEach(fiber => {
-        if (fiber.tag === tag.ClassComponent) {
-            return;
-        }
-        let domParent = fiber.return;
-        while (domParent.tag === tag.ClassComponent) {//class类型组件
-            domParent = domParent.return;
-        }
-        if (fiber.effectTag === Effect.PLACEMENT) {
-            if (!fiber.sibling || fiber.sibling.effectTag === Effect.PLACEMENT) {
-                domParent.stateNode.appendChild(fiber.stateNode);
-            }
-            else {
-                domParent.stateNode.insertBefore(fiber.stateNode, fiber.sibling.stateNode);
-            }
-        }
-        if (fiber.effectTag === Effect.DELETION) {
-            try {
-                domParent.stateNode.removeChild(fiber.stateNode);
-            }
-            catch (e) {
-                console.error(e);
-            }
-        }
-        fiber.effectTag = null;
-    })
-    topFiber.effects = [];
-}
-
-function commitPreLifeCycle(topFiber) {
-    topFiber.effects.forEach((fiber, i) => {
-        if (fiber.tag === tag.ClassComponent) {
-            const instance = fiber.stateNode;
-            const UNSAFE_componentWillMount = instance.UNSAFE_componentWillMount;
-            const UNSAFE_componentWillUpdate = instance.UNSAFE_componentWillUpdate;
-            if (fiber.alternate === null) {
-                if (typeof UNSAFE_componentWillMount === "function") {
-                    UNSAFE_componentWillMount.call(instance);
-                }
-            }
-            else {
-                if (typeof UNSAFE_componentWillUpdate === "function") {
-                    UNSAFE_componentWillUpdate.call(instance, fiber.stateNode.props, fiber.stateNode.state);
-                }
-            }
-
-        }
-
-    })
-}
-
-function commitLifeCycle(topFiber) {
-    topFiber.effects.forEach((fiber, i) => {
-        if (fiber.tag === tag.ClassComponent) {
-            const instance = fiber.stateNode;
-            const componentDidMount = instance.componentDidMount;
-            const componentDidUpdate = instance.componentDidUpdate;
-            if (fiber.alternate === null) {
-                if (typeof componentDidMount === "function") {
-                    componentDidMount.call(instance);
-                }
-            }
-            else {
-                if (typeof componentDidUpdate === "function") {
-                    componentDidUpdate.call(instance, fiber.alternate.stateNode.props, fiber.alternate.stateNode.state);
-                }
-            }
-
-        }
-
-    })
-}
 
 function workLoop(deadline) {
     if (deadline) {

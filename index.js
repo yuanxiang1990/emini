@@ -8,14 +8,18 @@ class A extends Component {
         this.state = {
             title: 'hehehe',
             eventTitle: 'hahaha',
-            list: [8, 7, 4, 909090909090]
+            list: [8, 7, 4, 909090909090],
+            isShowB: false,
+            label: '222'
         }
     }
 
     clickHandler = (e) => {
         e.stopPropagation();
         this.setState({
-            eventTitle: 'clickHandler' + Math.random()
+            title: 'clickHandler' + Math.random(),
+            label: Math.random(),
+            isShowB: true
         })
     }
 
@@ -29,7 +33,12 @@ class A extends Component {
 
     }
 
-    componentDidUpdate(prevProps, prevState) {
+    getSnapshotBeforeUpdate(prevProps, prevState) {
+
+    }
+
+    componentDidUpdate(prevProps, prevState, snapshot) {
+        console.log(snapshot, 'snapshot')
         /* this.setState({
              title: 111
          })*/
@@ -54,6 +63,10 @@ class A extends Component {
         console.log('Component WILL UNMOUNT!')
     }
 
+    componentDidMount() {
+        console.log(document.getElementById('main').childNodes.length)
+    }
+
     render() {
         return <div>
             {<ul>
@@ -65,10 +78,10 @@ class A extends Component {
                 {this.state.title}
             </div>
             <a href="javascript:void(0)" onClick={this.clickHandler}>点击</a>
+            {this.state.isShowB ? <B eventTitle={this.state.eventTitle} label={this.state.label}/> : ""}
             <div>
                 {this.state.eventTitle}
             </div>
-            <B eventTitle={this.state.eventTitle}/>
         </div>
     }
 }
@@ -76,9 +89,29 @@ class A extends Component {
 class B extends Component {
     constructor(props) {
         super(props)
-        this.state = {
-            label: 'aaa'
+    }
+
+    UNSAFE_componentWillReceiveProps(nextProps) {
+        console.log(nextProps, 99999999999)
+    }
+
+    static getDerivedStateFromProps(props, state) {
+        return {
+            ...state,
+            ...props
         }
+    }
+
+    componentDidMount() {
+        console.log("B mounted!");
+    }
+
+    componentDidUpdate() {
+        console.log("B updated!");
+    }
+
+    componentWillUnmount() {
+        console.log('Component WILL UNMOUNT!');
     }
 
     clickHandler = (e) => {
@@ -89,10 +122,9 @@ class B extends Component {
     }
 
     render() {
-        console.log(this.props)
         return <div>
-            from props:{this.props.eventTitle||''}
-            <div onClick={this.clickHandler}>{this.state.label}</div>
+            from props:{this.props.eventTitle || ''}
+            <div onClick={this.clickHandler}>{this.state.label}{"bbb"}</div>
         </div>
     }
 }
