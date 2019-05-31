@@ -98,8 +98,17 @@ function commitAfterLifeCycle(topFiber) {
                 }
             }
             else {
+                const getSnapshotBeforeUpdate = instance.getSnapshotBeforeUpdate;
+
                 if (typeof componentDidUpdate === "function") {
-                    componentDidUpdate.call(instance, fiber.alternate.stateNode.props, fiber.alternate.stateNode.state);
+                    const preProps = fiber.alternate.props;
+                    const preState = fiber.alternate.memoizedState;
+                    if (typeof getSnapshotBeforeUpdate === "function") {
+                        componentDidUpdate.call(instance, preProps, preState, getSnapshotBeforeUpdate(preProps, preState));
+                    }
+                    else {
+                        componentDidUpdate.call(instance, preProps, preState);
+                    }
                 }
             }
 

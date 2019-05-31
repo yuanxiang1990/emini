@@ -57,10 +57,10 @@ function differChildren(currentFiber, newChildren) {
         var newItem = newChildren[j];
         if (sameNode(oldChildren[i], newChildren[j])) {
             let fiber = createFiberFromElement(newItem);//创建新的fiber节点
-            fiber.stateNode = oldChildren[i].stateNode;
             oldChildren[i].effects.length = 0;
             fiber.alternate = oldChildren[i] || null;//储存旧的节点
             fiber.return = currentFiber;
+            fiber.stateNode = oldChildren[i].stateNode;
             fiber.updateQueue = oldChildren[i].updateQueue;
             fiber.stateNode._reactInternalFiber = fiber;
             if (!preFiber) {
@@ -218,6 +218,7 @@ export function updateClassComponent(workInProgress) {
         return workInProgress.child;
     }
     instance.state = newState;
+    workInProgress.memoizedState = {...newState};//和stateNode指向不同对象，防止更改stateNode时影响到外层memoizedState
     if (instance._partialState) {
         instance._partialState = null;
     }

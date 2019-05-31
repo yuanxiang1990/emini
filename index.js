@@ -34,7 +34,7 @@ class A extends Component {
     }
 
     getSnapshotBeforeUpdate(prevProps, prevState) {
-
+        return  prevState
     }
 
     componentDidUpdate(prevProps, prevState, snapshot) {

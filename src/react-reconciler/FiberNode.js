@@ -17,7 +17,7 @@ export  class FiberNode {
         this.index = 0;
 
         this.props = pendingProps;
-
+        this.memoizedState = null;
 
         // Effects
         // this.effectTag = NoEffect;
