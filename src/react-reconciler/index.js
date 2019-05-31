@@ -151,16 +151,29 @@ function performWorkOnRoot(deadline, root) {
         nextUnitOfWork = workInProgress;
         nextRenderExpirationTime = workInProgress.expirationTime;
     }
-
-    workLoop(deadline);
+    try {
+        workLoop(deadline);
+    }
+    catch (e) {
+        nextUnitOfWork = throwException(nextUnitOfWork, e);
+        console.error(e);
+    }
     recomputeCurrentRendererTime();
     let expirationTime = workInProgress.expirationTime;
     //继续处理回调
-    if (nextUnitOfWork && currentRendererTime > expirationTime) {
-        requestIdleCallback((deadline) => {
-            performWorkOnRoot(deadline, nextUnitOfWork)
-        })
+    if (nextUnitOfWork) {
+        if (currentRendererTime > expirationTime && deadline.didTimeout) {//帧超时退出
+            requestIdleCallback((deadline) => {
+                performWorkOnRoot(deadline, nextUnitOfWork);
+            })
+        }
+        else {//错误异常退出等。。。
+            performWorkOnRoot(deadline, nextUnitOfWork);
+        }
     }
+    /**
+     * 任务已处理完，直接进入commit阶段
+     */
     else {
         isCommitting = true;
         commitAllWork(pendingCommit);
@@ -175,6 +188,33 @@ function performWorkOnRoot(deadline, root) {
     }
 }
 
+function throwException(workInProgress, error) {
+    do {
+        workInProgress = workInProgress.return;
+        switch (workInProgress.tag) {
+            case tag.HostRoot:
+                //TODO:根节点错误处理
+                return workInProgress
+            case tag.ClassComponent:
+                const getDerivedStateFromError = workInProgress.stateNode.constructor.getDerivedStateFromError;
+                const componentDidCatch = workInProgress.stateNode.componentDidCatch;
+                if (typeof getDerivedStateFromError === "function") {
+                    workInProgress.updateQueue.push({
+                        payload: getDerivedStateFromError(error)
+                    });
+                }
+                if (typeof componentDidCatch === "function") {
+                    workInProgress.updateQueue.push({
+                        callback: (error) => componentDidCatch(error)
+                    });
+                }
+                if (typeof getDerivedStateFromError === "function" || typeof componentDidCatch === "function") {
+                    return workInProgress;
+                }
+
+        }
+    } while (workInProgress !== null);
+}
 
 function workLoop(deadline) {
     if (deadline) {

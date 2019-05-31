@@ -34,7 +34,15 @@ class A extends Component {
     }
 
     getSnapshotBeforeUpdate(prevProps, prevState) {
-        return  prevState
+        return prevState
+    }
+
+
+    static getDerivedStateFromError(error) {
+        return {
+            error: true,
+            msg: error
+        }
     }
 
     componentDidUpdate(prevProps, prevState, snapshot) {
@@ -68,6 +76,9 @@ class A extends Component {
     }
 
     render() {
+        if (this.state.error) {
+            return <div className="test" id="test"><b style="color:red">出错了！！！{this.state.msg}</b></div>
+        }
         return <div>
             {<ul>
                 {
@@ -110,6 +121,9 @@ class B extends Component {
         console.log("B updated!");
     }
 
+    UNSAFE_componentWillMount() {
+    }
+
     componentWillUnmount() {
         console.log('Component WILL UNMOUNT!');
     }
@@ -122,6 +136,8 @@ class B extends Component {
     }
 
     render() {
+        componentWillUnmount.a.a
+
         return <div>
             from props:{this.props.eventTitle || ''}
             <div onClick={this.clickHandler}>{this.state.label}{"bbb"}</div>
@@ -132,6 +148,7 @@ class B extends Component {
 
 ReactDom.render(
     <div>
+        测试测试
         <A/>
     </div>
     , document.getElementById('main'));
