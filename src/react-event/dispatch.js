@@ -1,6 +1,7 @@
 import {tag} from "../react-reconciler/FiberNode"
 import {SyntheticEvent} from "../events/SyntheticEvent";
-import {setBatchingInteractiveUpdates} from "../react-reconciler";
+import {performSyncWork, setBatchingInteractiveUpdates} from "../react-reconciler";
+import {setBatchingUpdates} from "../react-reconciler/index";
 
 export function dispatch(e) {
     const nativeEventTarget = e.target || e.srcElement;
@@ -23,10 +24,20 @@ export function dispatch(e) {
         const handler = ancestor.props[eventName];
         if (handler) {
             setBatchingInteractiveUpdates(true);
-            handler.call(null, syntheticEvent);
-            setBatchingInteractiveUpdates(false);
-            if (syntheticEvent.isPropagationStopped) {
-                break;
+            setBatchingUpdates(true);
+            try {
+                handler.call(null, syntheticEvent);
+            }
+            catch (e) {
+                console.log(e);
+            }
+            finally {
+                setBatchingInteractiveUpdates(false);
+                setBatchingInteractiveUpdates(false);
+                performSyncWork();
+                if (syntheticEvent.isPropagationStopped) {
+                    break;
+                }
             }
         }
     }

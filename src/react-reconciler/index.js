@@ -26,6 +26,7 @@ let nextRenderExpirationTime = NoWork;
 let isWorking = false;
 let isCommitting = false;
 let isBatchingInteractiveUpdates = false;//是否高优先级更新，如用户交互等
+let isBatchingUpdates = false;//是否合成更新
 let workInProgress = null;//当前工作树
 let nextUnitOfWork = null;//下一工作单元的任务
 let pendingCommit;
@@ -72,11 +73,16 @@ function updateContainerAtExpirationTime(currentFiber, expirationTime) {
 
 
 function scheduleWork(root, expirationTime) {
+    addRootToSchedule(root, expirationTime);
+
+    if (isBatchingUpdates) {
+        return;
+    }
+
     requestWork(root, expirationTime);
 }
 
 function requestWork(root, expirationTime) {
-    addRootToSchedule(root, expirationTime);
     if (isRendering) {
         //当前正在渲染时先不执行，最后一次再一起执行
         return
@@ -124,8 +130,8 @@ function findHighestPriorityRoot() {
     nextFlushedExpirationTime = highestPriorityWork;
 }
 
-function performSyncWork(root) {
-    performWork(null, root)
+export function performSyncWork() {
+    performWork(null)
 }
 
 function performAsyncWork(root, expirationTime) {
@@ -205,7 +211,7 @@ function throwException(workInProgress, error) {
                 }
                 if (typeof componentDidCatch === "function") {
                     workInProgress.updateQueue.push({
-                        callback: (error) => componentDidCatch(error)
+                        callback: () => componentDidCatch(error)
                     });
                 }
                 if (typeof getDerivedStateFromError === "function" || typeof componentDidCatch === "function") {
@@ -274,6 +280,7 @@ function beginWork(workInProgress) {
             workInProgress.updateQueue.forEach(item => {
                 update = Object.assign(update, item.payload);
             })
+            console.log(update, 'up')
             if (!isEmptyObject(update)) {
                 workInProgress.stateNode._partialState = update;
                 workInProgress.effectTag = Effect.UPDATE;
@@ -361,4 +368,12 @@ function computeExpirationForFiber(currentTime) {
 
 export function setBatchingInteractiveUpdates(val) {
     isBatchingInteractiveUpdates = val;
+}
+
+export function setBatchingUpdates(val) {
+    isBatchingUpdates = val;
+}
+
+export function getBatchingUpdates() {
+    return isBatchingUpdates;
 }

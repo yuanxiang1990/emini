@@ -6,7 +6,7 @@ class A extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            title: 'hehehe',
+            title: 1,
             eventTitle: 'hahaha',
             list: [8, 7, 4, 909090909090],
             isShowB: false,
@@ -16,10 +16,18 @@ class A extends Component {
 
     clickHandler = (e) => {
         e.stopPropagation();
+        let i = this.state.title;
         this.setState({
-            title: 'clickHandler' + Math.random(),
-            label: Math.random(),
-            isShowB: true
+            title: i + 1
+        })
+        this.setState({
+            title: i + 1
+        })
+        this.setState({
+            title: i + 1
+        })
+        this.setState({
+            title: i + 1
         })
     }
 
@@ -72,7 +80,17 @@ class A extends Component {
     }
 
     componentDidMount() {
-        console.log(document.getElementById('main').childNodes.length)
+        let i = this.state.title;
+        this.setState({
+            title: i + 1
+        })
+        this.setState({
+            title: i + 1
+        })
+    }
+
+    componentDidCatch(e) {
+        alert("出错了" + e);
     }
 
     render() {

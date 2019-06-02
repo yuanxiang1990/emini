@@ -111,8 +111,13 @@ function commitAfterLifeCycle(topFiber) {
                     }
                 }
             }
-
+            commitQueue(fiber)
         }
+    })
+}
 
+function commitQueue(fiber) {
+    fiber.updateQueue && fiber.updateQueue.forEach(queue => {
+        queue.callback && queue.callback();
     })
 }
