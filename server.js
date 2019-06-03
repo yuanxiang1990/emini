@@ -3,8 +3,9 @@ const webpackHotMiddleware = require("webpack-hot-middleware");
 const webpackDevMiddleware = require("webpack-dev-middleware");
 const express = require("express");
 const opn = require("opn");
-const webpakcConfig = require("./webpack.config");
+const webpakcConfig = require("./webpack.config.dev");
 const path = require("path");
+webpakcConfig.entry.app.unshift("webpack-hot-middleware/client?noInfo=true&reload=true");
 const app = express(),
     PORT = 8888,
     DIST_DIR = path.join(__dirname, 'dist'),

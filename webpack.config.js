@@ -1,13 +1,17 @@
 const path = require("path");
 const htmlWebpackPlugin = require('html-webpack-plugin');
 const webpack = require("webpack");
-
+const HappyPack = require("happypack");
 module.exports = {
     mode: "development",
     devtool: "cheap-source-map",
+    resolve: {
+        modules: [path.resolve(__dirname, 'node_modules')],
+        //尽可能减 少后缀尝试的可能性
+        extensions: ['.js']
+    },
     entry: {
         app: [
-            "webpack-hot-middleware/client?noInfo=true&reload=true",
             "./index.js"
         ]
     },
@@ -15,8 +19,8 @@ module.exports = {
         rules: [
             {
                 test: /\.(js|jsx)$/,
+                use: "happypack/loader?id=babel",
                 exclude: /node_modules/,
-                loader: "babel-loader"
             }
         ]
     },
@@ -26,6 +30,12 @@ module.exports = {
         filename: "[name].js"
     },
     plugins: [
+        new HappyPack({
+            id: "babel",
+            loaders: ['babel-loader?cacheDirectory=true'],
+            cache: true,
+            verbose: true
+        }),
         new htmlWebpackPlugin({
             title: 'mini react',
             template: path.resolve(__dirname, 'index.html')

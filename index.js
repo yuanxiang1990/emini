@@ -8,7 +8,7 @@ class A extends Component {
         this.state = {
             title: 1,
             eventTitle: 'hahaha',
-            list: [8, 7, 4, 909090909090],
+            list: [1, 7, 4, 909090909090],
             isShowB: false,
             label: '222'
         }
@@ -27,7 +27,7 @@ class A extends Component {
             title: i + 1
         })
         this.setState({
-            title: i + 1
+            title: i + 3
         })
     }
 
@@ -162,7 +162,6 @@ class B extends Component {
         </div>
     }
 }
-
 
 ReactDom.render(
     <div>
