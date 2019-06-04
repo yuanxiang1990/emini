@@ -22,7 +22,7 @@ function sameNode(oldNode, newNode) {
 }
 
 
-function createFiberFromElement(element) {
+function createFiberFromElement(element){
     let newFiber;
     if (typeof element.type === "function") {
         newFiber = createFiber(
@@ -162,6 +162,7 @@ function fiberListToArray(fiber) {
  * @returns {*}
  */
 export function updateHostComponent(currentFiber) {
+    console.log(currentFiber,7777)
     let oldFiber, newFiber, element = currentFiber.props.children;
     /**
      * 无子节点的情况

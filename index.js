@@ -49,7 +49,7 @@ class A extends Component {
     static getDerivedStateFromError(error) {
         return {
             error: true,
-            msg: error
+            msg: error.message
         }
     }
 
@@ -84,9 +84,6 @@ class A extends Component {
         this.setState({
             title: i + 1
         })
-        this.setState({
-            title: i + 1
-        })
     }
 
     componentDidCatch(e) {
@@ -107,7 +104,7 @@ class A extends Component {
                 {this.state.title}
             </div>
             <a href="javascript:void(0)" onClick={this.clickHandler}>点击</a>
-            {this.state.isShowB ? <B eventTitle={this.state.eventTitle} label={this.state.label}/> : ""}
+            <B render={mouse => mouse + 1}/>
             <div>
                 {this.state.eventTitle}
             </div>
@@ -117,7 +114,10 @@ class A extends Component {
 
 class B extends Component {
     constructor(props) {
-        super(props)
+        super(props);
+        this.state={
+            label:1111
+        }
     }
 
     UNSAFE_componentWillReceiveProps(nextProps) {
@@ -154,10 +154,9 @@ class B extends Component {
     }
 
     render() {
-        componentWillUnmount.a.a
 
         return <div>
-            from props:{this.props.eventTitle || ''}
+            {this.props.render(1)}
             <div onClick={this.clickHandler}>{this.state.label}{"bbb"}</div>
         </div>
     }

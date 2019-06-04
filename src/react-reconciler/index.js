@@ -145,6 +145,8 @@ function performWork(deadline, root) {
     findHighestPriorityRoot();
     while (nextFlushedRoot !== null && nextFlushedExpirationTime !== NoWork) {
         performWorkOnRoot(deadline, nextFlushedRoot);
+        nextFlushedRoot.expirationTime = NoWork;
+        rootQueue.splice(rootQueue.indexOf(nextFlushedRoot), 1);
         findHighestPriorityRoot();
     }
 }
@@ -188,14 +190,13 @@ function performWorkOnRoot(deadline, root) {
         isWorking = false;
         pendingCommit = null;
         nextRenderExpirationTime = NoWork;
-        root.expirationTime = NoWork;
-        rootQueue.splice(rootQueue.indexOf(root), 1);
-        //workInProgress = null;
     }
 }
 
 function throwException(workInProgress, error) {
     do {
+        console.log(workInProgress,99999)
+        console.log(error,99999)
         workInProgress = workInProgress.return;
         switch (workInProgress.tag) {
             case tag.HostRoot:
@@ -283,7 +284,6 @@ function beginWork(workInProgress) {
             console.log(update, 'up')
             if (!isEmptyObject(update)) {
                 workInProgress.stateNode._partialState = update;
-                workInProgress.effectTag = Effect.UPDATE;
             }
             workInProgress.stateNode.updater = classComponentUpdater;
             return updateClassComponent(workInProgress);
