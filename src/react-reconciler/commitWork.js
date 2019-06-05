@@ -42,11 +42,37 @@ function commitPlacement(fiber, domParent) {
  */
 function getHostSibling(domParent, fiber) {
     let node = fiber;
-    while (node !== domParent) {
-        if (node.sibling && node.sibling.effectTag !== Effect.PLACEMENT) {
+    while (true) {
+        if (node.sibling === null) {
+            if (node.return === domParent) {
+                return null;
+            }
+            else {//需要往上搜索HostElement
+                node = node.return;
+            }
+        }
+        else if (node.sibling.effectTag === Effect.PLACEMENT) {
+            node = node.sibling;
+        }
+        else if (node.sibling.tag === tag.ClassComponent) {//需要往下搜索HostElement
+            let classComponent = node.sibling;
+            let child = classComponent.child;
+            if (child === null) {
+                node = node.sibling;
+                continue;
+            }
+            while (child.tag !== tag.HostComponent) {
+                child = child.child;
+                if (child === null) {
+                    node = node.sibling;
+                    continue;
+                }
+            }
+            return child;
+        }
+        else {
             return node.sibling;
         }
-        node = node.return;
     }
 }
 

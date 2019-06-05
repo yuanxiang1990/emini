@@ -8,7 +8,7 @@ class A extends Component {
         this.state = {
             title: 1,
             eventTitle: 'hahaha',
-            list: [1, 7, 4, 909090909090],
+            list: [1, 3, 4, 909090909090],
             isShowB: false,
             label: '222'
         }
@@ -18,16 +18,8 @@ class A extends Component {
         e.stopPropagation();
         let i = this.state.title;
         this.setState({
-            title: i + 1
-        })
-        this.setState({
-            title: i + 1
-        })
-        this.setState({
-            title: i + 1
-        })
-        this.setState({
-            title: i + 3
+            isShowB: true,
+            list: [1, 2, 3, 4]
         })
     }
 
@@ -95,16 +87,18 @@ class A extends Component {
             return <div className="test" id="test"><b style="color:red">出错了！！！{this.state.msg}</b></div>
         }
         return <div>
+            <input type="text" value={1}/>
             {<ul>
                 {
-                    this.state.list.map((item) => <li>{item}</li>)
+                    this.state.list.map((item) => <li key={item}>{item}</li>)
                 }
             </ul>}
             <div>
                 {this.state.title}
             </div>
             <a href="javascript:void(0)" onClick={this.clickHandler}>点击</a>
-            <B render={mouse => mouse + 1}/>
+            {this.state.isShowB ? <div>1234</div> : ''}
+            <B render={mouse => <b>{mouse + 1}</b>}/>
             <div>
                 {this.state.eventTitle}
             </div>
@@ -115,8 +109,8 @@ class A extends Component {
 class B extends Component {
     constructor(props) {
         super(props);
-        this.state={
-            label:1111
+        this.state = {
+            label: 1111
         }
     }
 

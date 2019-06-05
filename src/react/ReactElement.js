@@ -2,7 +2,6 @@ class ReactElement {
     constructor(type, props) {
         this.type = type;
         this.props = props;
-        this.key = String(Math.random());
     }
 }
 
