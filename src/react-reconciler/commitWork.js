@@ -37,7 +37,8 @@ function commitPlacement(fiber, domParent) {
 }
 
 /**
- * 查找当前节点已插入dom中的兄弟节点
+ * 查找当前节点已插入dom中的兄弟节点,注意如果插入对象是class类型组件，需向上查找兄弟节点，
+ * 当兄弟节点为class类型组件时需向下查找兄弟节点
  * @param fiber
  */
 function getHostSibling(domParent, fiber) {
