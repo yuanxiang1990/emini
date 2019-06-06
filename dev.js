@@ -5,10 +5,14 @@ import {Component} from "./src/react/ReactComponent";
 class A extends Component {
     constructor(props) {
         super(props);
+        const list = [];
+        for(let i = 0;i<11111;i++){
+            list.push(String(i));
+        }
         this.state = {
             title: 1,
             eventTitle: 'hahaha',
-            list: [1, 3, 4, 909090909090],
+            list: list,
             isShowB: false,
             label: '222'
         }
@@ -17,6 +21,7 @@ class A extends Component {
     clickHandler = (e) => {
         e.stopPropagation();
         let i = this.state.title;
+
         this.setState({
             isShowB: true,
             list: [1, 2, 3, 4]
@@ -88,6 +93,8 @@ class A extends Component {
         }
         return <div>
             <input type="text" value={1}/>
+            <a href="javascript:void(0)" onClick={this.clickHandler}>点击</a>
+
             {<ul>
                 {
                     this.state.list.map((item) => <li key={item}>{item}</li>)
@@ -96,9 +103,7 @@ class A extends Component {
             <div>
                 {this.state.title}
             </div>
-            <a href="javascript:void(0)" onClick={this.clickHandler}>点击</a>
             {this.state.isShowB ? <div>这是在class类型组件前插入节点</div> : ''}
-            <B render={mouse => <b>{mouse + 1}</b>}/>
             {this.state.isShowB ? <B/> : ''}
             <div>
                 {this.state.eventTitle}

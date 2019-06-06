@@ -175,7 +175,7 @@ function performWorkOnRoot(deadline, root) {
     let expirationTime = workInProgress.expirationTime;
     //继续处理回调
     if (nextUnitOfWork) {
-        if (currentRendererTime > expirationTime && deadline.didTimeout) {//帧超时退出
+        if (currentRendererTime > expirationTime && deadline.timeRemaining()===0) {//帧超时退出
             requestIdleCallback((deadline) => {
                 performWorkOnRoot(deadline);
             })
@@ -230,7 +230,8 @@ function throwException(workInProgress, error) {
 
 function workLoop(deadline) {
     if (deadline) {
-        while (nextUnitOfWork && !deadline.didTimeout) {
+        while (nextUnitOfWork && deadline.timeRemaining()>0) {
+
             nextUnitOfWork = performUnitWork(nextUnitOfWork);
         }
     }

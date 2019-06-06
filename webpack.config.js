@@ -12,7 +12,7 @@ module.exports = {
     },
     entry: {
         app: [
-            "./index.js"
+            "./dev.js"
         ]
     },
     module: {

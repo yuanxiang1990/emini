@@ -15,7 +15,11 @@ export function finalizeInitialFiber(fiber, rootInstance) {
                 trapBubbledEvent(propKey, isDocumentOrFragment ? rootElement : rootElement.ownerDocument);
             }
             else if (propKey !== 'children') {
-                fiber.stateNode.setAttribute(propKey, props[propKey]);
+                let attrName = propKey;
+                if (propKey === 'className') {
+                    attrName = 'class'
+                }
+                fiber.stateNode.setAttribute(attrName, props[propKey]);
             }
         }
     }

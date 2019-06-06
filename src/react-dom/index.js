@@ -17,6 +17,7 @@ const ReactDom = {
         root.stateNode = container;
         root.alternate = null;
         updateContainer(element, root);
+        console.log(root.stateNode,999)
         return root.stateNode;
     }
 };
