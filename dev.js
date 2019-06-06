@@ -6,9 +6,7 @@ class A extends Component {
     constructor(props) {
         super(props);
         const list = [];
-        for(let i = 0;i<11111;i++){
-            list.push(String(i));
-        }
+
         this.state = {
             title: 1,
             eventTitle: 'hahaha',
@@ -29,12 +27,10 @@ class A extends Component {
     }
 
     UNSAFE_componentWillMount() {
-        /*    setInterval(() => {
-                this.setState({
-                    title: Math.random(),
-                    list: [Math.random(), Math.random(), Math.random(), Math.random(), Math.random()]
-                })
-            }, 9999)*/
+        this.setState({
+            title: Math.random(),
+            //  list: [Math.random(), Math.random(), Math.random(), Math.random(), Math.random()]
+        })
 
     }
 
@@ -77,10 +73,15 @@ class A extends Component {
     }
 
     componentDidMount() {
-       /* let i = this.state.title;
+        const list = [];
+        for (let i = 0; i < 9991; i++) {
+            list.push(String(i));
+        }
+        let i = this.state.title;
         this.setState({
-            title: i + 1
-        })*/
+            title: i + 1,
+            list: list
+        })
     }
 
     componentDidCatch(e) {
@@ -155,7 +156,7 @@ class B extends Component {
 
     render() {
         return <div>
-            {this.props.render?this.props.render(1):''}
+            {this.props.render ? this.props.render(1) : ''}
             <div onClick={this.clickHandler}>{this.state.label}{"bbb"}</div>
         </div>
     }

@@ -15,7 +15,7 @@ import {tag, FiberNode, getRootFiber} from "./FiberNode";
 import {updateHostComponent, updateClassComponent, Effect} from "./differ";
 import {isEmptyObject} from "../utils/index";
 import {finalizeInitialFiber} from "../react-event"
-import {commitAllWork} from "./commitWork";
+import {commitAfterLifeCycle, commitAllWork, commitPreLifeCycle} from "./commitWork";
 
 let isRendering = false;//是否正在渲染包括reconcile阶段和commit阶段
 let currentSchedulerTime = maxSigned31BitInt - Date.now();
@@ -40,7 +40,10 @@ const classComponentUpdater = {
     enqueueSetState: function (inst, payload) {
         const fiber = inst._reactInternalFiber;
         const currentTime = requestCurrentTime();
-        const expirationTime = computeExpirationForFiber(currentTime);
+        const root = getRootFiber(fiber);
+        const expirationTime = computeExpirationForFiber(currentTime, root);
+        root.expirationTime = expirationTime;
+        root.isSync = false;
         if (expirationTime > nextRenderExpirationTime) {//更高优先级任务到来时终止当前任务
             nextUnitOfWork = null;
             nextRenderExpirationTime = NoWork;
@@ -48,8 +51,6 @@ const classComponentUpdater = {
         fiber.updateQueue.push({
             payload
         })
-        const root = getRootFiber(fiber);
-        root.expirationTime = expirationTime;
         scheduleWork(root, expirationTime);
     }
 }
@@ -58,7 +59,7 @@ const classComponentUpdater = {
 export function updateContainer(children, containerFiberRoot) {
     let root = containerFiberRoot;
     let currentTime = requestCurrentTime();
-    let expirationTime = computeExpirationForFiber(currentTime);
+    let expirationTime = computeExpirationForFiber(currentTime, root);
     root.expirationTime = expirationTime;
     root.updateQueue.push({
         element: children
@@ -94,6 +95,10 @@ function requestWork(root, expirationTime) {
     }
 }
 
+/**
+ * @param root
+ * @param expirationTime
+ */
 function addRootToSchedule(root, expirationTime) {
     let isAdd = false;
     for (let i = 0, len = rootQueue.length; i < len; i++) {
@@ -157,6 +162,7 @@ function performWork(deadline, root) {
  * @param root 参数可不传，任务中断在恢复时不需要root
  */
 function performWorkOnRoot(deadline, root) {
+    console.log(rootQueue.slice(0))
     isWorking = true;
     isRendering = true;
     if (nextUnitOfWork == null) {
@@ -168,14 +174,16 @@ function performWorkOnRoot(deadline, root) {
         workLoop(deadline);
     }
     catch (e) {
-        nextUnitOfWork = throwException(nextUnitOfWork, e);
         console.error(e);
+        nextUnitOfWork = throwException(nextUnitOfWork, e);
     }
     recomputeCurrentRendererTime();
     let expirationTime = workInProgress.expirationTime;
     //继续处理回调
     if (nextUnitOfWork) {
-        if (currentRendererTime > expirationTime && deadline.timeRemaining()===0) {//帧超时退出
+        if (deadline.timeRemaining() === 0) {//帧超时退出
+            console.log(222)
+
             requestIdleCallback((deadline) => {
                 performWorkOnRoot(deadline);
             })
@@ -188,8 +196,11 @@ function performWorkOnRoot(deadline, root) {
      * 任务已处理完，直接进入commit阶段
      */
     else {
+        commitPreLifeCycle(pendingCommit);
         isCommitting = true;
         commitAllWork(pendingCommit);
+        commitAfterLifeCycle(pendingCommit);
+        pendingCommit.effects = [];
         isCommitting = false;
         isRendering = false;
         isWorking = false;
@@ -230,7 +241,7 @@ function throwException(workInProgress, error) {
 
 function workLoop(deadline) {
     if (deadline) {
-        while (nextUnitOfWork && deadline.timeRemaining()>0) {
+        while (nextUnitOfWork && deadline.timeRemaining() > 0) {
 
             nextUnitOfWork = performUnitWork(nextUnitOfWork);
         }
@@ -354,7 +365,7 @@ function recomputeCurrentRendererTime() {
     currentRendererTime = msToExpirationTime(currentTimeMs);
 }
 
-function computeExpirationForFiber(currentTime) {
+function computeExpirationForFiber(currentTime, fiber) {
     let expirationTime;
     if (isWorking) {
         if (isCommitting) {//
@@ -363,6 +374,9 @@ function computeExpirationForFiber(currentTime) {
             expirationTime = nextRenderExpirationTime
         }
     } else {
+        if (fiber.isSync) {
+            return Sync;
+        }
         if (isBatchingInteractiveUpdates) {//优先级较高的任务如用户交互等
             expirationTime = computeInteractiveExpiration(currentTime);//计算出的值较大，优先级高
         } else {//普通异步任务

@@ -6,7 +6,6 @@ import {Effect} from "./differ";
  */
 export function commitAllWork(topFiber) {
     console.log(topFiber.effects.slice(0))
-    commitPreLifeCycle(topFiber);
     topFiber.effects.forEach(fiber => {
         let domParent = fiber.return;
         while (domParent.tag === tag.ClassComponent) {//class类型组件
@@ -20,8 +19,6 @@ export function commitAllWork(topFiber) {
         }
         fiber.effectTag = null;
     })
-    commitAfterLifeCycle(topFiber)
-    topFiber.effects = [];
 }
 
 function commitPlacement(fiber, domParent) {
@@ -91,7 +88,7 @@ function commitDeletion(fiber, domParent) {
     }
 }
 
-function commitPreLifeCycle(topFiber) {
+export function commitPreLifeCycle(topFiber) {
     topFiber.effects.forEach((fiber, i) => {
         if (fiber.tag === tag.ClassComponent) {
             const instance = fiber.stateNode;
@@ -113,7 +110,7 @@ function commitPreLifeCycle(topFiber) {
     })
 }
 
-function commitAfterLifeCycle(topFiber) {
+export function commitAfterLifeCycle(topFiber) {
     topFiber.effects.forEach((fiber, i) => {
         if (fiber.tag === tag.ClassComponent) {
             const instance = fiber.stateNode;
