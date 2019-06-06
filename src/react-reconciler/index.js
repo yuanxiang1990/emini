@@ -151,6 +151,11 @@ function performWork(deadline, root) {
     }
 }
 
+/**
+ *
+ * @param deadline
+ * @param root 参数可不传，任务中断在恢复时不需要root
+ */
 function performWorkOnRoot(deadline, root) {
     isWorking = true;
     isRendering = true;
@@ -172,11 +177,11 @@ function performWorkOnRoot(deadline, root) {
     if (nextUnitOfWork) {
         if (currentRendererTime > expirationTime && deadline.didTimeout) {//帧超时退出
             requestIdleCallback((deadline) => {
-                performWorkOnRoot(deadline, nextUnitOfWork);
+                performWorkOnRoot(deadline);
             })
         }
         else {//错误异常退出等。。。
-            performWorkOnRoot(deadline, nextUnitOfWork);
+            performWorkOnRoot(deadline);
         }
     }
     /**
@@ -195,8 +200,8 @@ function performWorkOnRoot(deadline, root) {
 
 function throwException(workInProgress, error) {
     do {
-        console.log(workInProgress,99999)
-        console.log(error,99999)
+        console.log(workInProgress, 99999)
+        console.log(error, 99999)
         workInProgress = workInProgress.return;
         switch (workInProgress.tag) {
             case tag.HostRoot:

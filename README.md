@@ -48,6 +48,32 @@ export class FiberNode {
 }
 ```
 **注意：改fiber结构做了很多简化，删除了一些不需要的属性。**
+这个alternate属性需要特别说一下，任务开始时会创建一颗workInProgress Tree。该对象是从alternate属性上创建的，workInProgress对象的alternate属性又指向当前的tree，当前的tree的alertnate对象又指向workInProgress。（**貌似非常绕**）后续的操作都是针对workInProgress操作，完成之后workInProgress就变成了新的fiber tree。下次执行时不会继创建workInProgress对象，而是把原对象的alternate属性赋值给workInProgress作为新的对象，此时的workInProgress的alternate就变成了原fibertree，然后把当前的child再赋值给新的workInprogre对象。后续的differ都是对当前对象的child和alternate对象的chidl做对比，如果相同则把alternate对象的child拷贝到新创建的fiber child的alertnate属性下。
+
+上面说了一大推估计基本都看晕了。总结一下就是当前tree和alternate是相互引用关系，新的任务到来时，当前对象需要挂载到alternate下，则只需把新的workInProgress指向当前对象的alternate即可。而新的child都需要从最新的element下创建。**这种相互持有引用的技术，react称之为双缓冲技术。**
+
+代码如下：
+```
+export function createWorkInProgress(current) {
+    let workInProgress = current.alternate;
+    if (workInProgress === null) {
+        workInProgress = new FiberNode(current.tag);
+        workInProgress.alternate = current;
+        workInProgress.stateNode = current.stateNode;
+        workInProgress.props = current.props || {};
+        workInProgress.expirationTime = current.expirationTime;
+        current.alternate = workInProgress;
+    } else {
+        workInProgress.effects = [];
+        workInProgress.child = current.child;
+        workInProgress.props = current.props;
+    }
+    workInProgress.expirationTime = current.expirationTime;
+    workInProgress.updateQueue = current.updateQueue;
+    return workInProgress;
+}
+```
+
 
 下面我们来看以下html结构
 
@@ -70,7 +96,7 @@ export class FiberNode {
 任务执行分片主要是采用浏览器的requestIdleCallback这个api。requestIdleCallback可以在浏览器一帧的空闲时间执行。requestIdleCallback具体可参考[http://www.zhangyunling.com/702.html/](http://www.zhangyunling.com/702.html/)
 
 ### 如何划分任务优先级
-在react中每个任务都会对应一次root，每个root会对应一个到期时间。在react中时间是反过来的，先出初始化一个非常大的时间然后依次减少。时间越大，任务优先级越高。计算到期时间的方法如下
+在react中每个任务都会对应一次root，每个root会对应一个到期时间。在react中时间是反过来的，先出初始化一个非常大的时间然后依次减少。时间越大，任务优先级越高。（注意：在原生react中当当前时间减去expirationTime差值为0时会自动获得高优先级执行该任务，防止低优先级任务一直被插队）计算到期时间的方法如下
 
 ```
 function computeExpirationForFiber(currentTime) {
@@ -351,4 +377,3 @@ export function commitAllWork(topFiber) {
 }
 ```
 commit阶段比较简单，主要就是将收集到的变更应用到真实dom当中。
-

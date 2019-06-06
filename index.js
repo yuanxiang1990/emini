@@ -72,10 +72,10 @@ class A extends Component {
     }
 
     componentDidMount() {
-        let i = this.state.title;
+       /* let i = this.state.title;
         this.setState({
             title: i + 1
-        })
+        })*/
     }
 
     componentDidCatch(e) {
@@ -97,8 +97,9 @@ class A extends Component {
                 {this.state.title}
             </div>
             <a href="javascript:void(0)" onClick={this.clickHandler}>点击</a>
-            {this.state.isShowB ? <div>1234</div> : ''}
+            {this.state.isShowB ? <div>这是在class类型组件前插入节点</div> : ''}
             <B render={mouse => <b>{mouse + 1}</b>}/>
+            {this.state.isShowB ? <B/> : ''}
             <div>
                 {this.state.eventTitle}
             </div>
@@ -148,9 +149,8 @@ class B extends Component {
     }
 
     render() {
-
         return <div>
-            {this.props.render(1)}
+            {this.props.render?this.props.render(1):''}
             <div onClick={this.clickHandler}>{this.state.label}{"bbb"}</div>
         </div>
     }
