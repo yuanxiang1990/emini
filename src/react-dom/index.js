@@ -16,7 +16,7 @@ const ReactDom = {
         const root = createHostRootFiber();
         root.stateNode = container;
         root.alternate = null;
-        root.isSync = true;//首屏采用同步渲染
+        root.isSync = false;//首屏采用同步渲染
         updateContainer(element, root);
         console.log(root.stateNode,999)
         return root.stateNode;

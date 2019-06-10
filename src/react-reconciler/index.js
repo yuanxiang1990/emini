@@ -10,7 +10,10 @@ import {
     UNIT_SIZE,
     computeInteractiveExpiration,
     computeAsyncExpiration
-} from "./ReactFiberExpirationTime.js"
+} from "./ReactFiberExpirationTime.js";
+/**
+ * TODO 任务插队优化！！
+ */
 import {tag, FiberNode, getRootFiber} from "./FiberNode";
 import {updateHostComponent, updateClassComponent, Effect} from "./differ";
 import {isEmptyObject} from "../utils/index";
@@ -113,6 +116,7 @@ function addRootToSchedule(root, expirationTime) {
     if (!isAdd) {
         rootQueue.push(root);
     }
+    console.log(rootQueue,909090)
 }
 
 
@@ -142,17 +146,27 @@ export function performSyncWork() {
 function performAsyncWork(root, expirationTime) {
     recomputeCurrentRendererTime();
     requestIdleCallback((deadline) => {
-        return performWork(deadline, root)
+        return performWork(deadline)
     })
 }
 
-function performWork(deadline, root) {
+function performWork(deadline) {
     findHighestPriorityRoot();
     while (nextFlushedRoot !== null && nextFlushedExpirationTime !== NoWork) {
-        performWorkOnRoot(deadline, nextFlushedRoot);
-        nextFlushedRoot.expirationTime = NoWork;
-        rootQueue.splice(rootQueue.indexOf(nextFlushedRoot), 1);
-        findHighestPriorityRoot();
+        let res = null;
+        if (nextFlushedRoot.expirationTime === Sync) {
+            res = performWorkOnRoot(null, nextFlushedRoot);
+        }
+        else {
+            res = performWorkOnRoot(deadline, nextFlushedRoot)
+        }
+        if (res && res.status === "timeout") {
+            console.log("timeout")
+            break;
+        }
+        else {
+            findHighestPriorityRoot();
+        }
     }
 }
 
@@ -162,7 +176,6 @@ function performWork(deadline, root) {
  * @param root 参数可不传，任务中断在恢复时不需要root
  */
 function performWorkOnRoot(deadline, root) {
-    console.log(rootQueue.slice(0))
     isWorking = true;
     isRendering = true;
     if (nextUnitOfWork == null) {
@@ -181,15 +194,21 @@ function performWorkOnRoot(deadline, root) {
     let expirationTime = workInProgress.expirationTime;
     //继续处理回调
     if (nextUnitOfWork) {
-        if (deadline.timeRemaining() === 0) {//帧超时退出
-            console.log(222)
-
+        if (deadline && deadline.timeRemaining() === 0) {//帧超时退出
             requestIdleCallback((deadline) => {
-                performWorkOnRoot(deadline);
+                performWork(deadline);
             })
+            isWorking = false;
+            isRendering = false;
+            return {
+                status: "timeout"
+            }
         }
         else {//错误异常退出等。。。
-            performWorkOnRoot(deadline);
+            performWork(deadline);
+            return {
+                status: "error"
+            }
         }
     }
     /**
@@ -200,6 +219,8 @@ function performWorkOnRoot(deadline, root) {
         isCommitting = true;
         commitAllWork(pendingCommit);
         commitAfterLifeCycle(pendingCommit);
+        nextFlushedRoot.expirationTime = NoWork;
+        rootQueue.splice(rootQueue.indexOf(nextFlushedRoot), 1);
         pendingCommit.effects = [];
         isCommitting = false;
         isRendering = false;
@@ -211,8 +232,6 @@ function performWorkOnRoot(deadline, root) {
 
 function throwException(workInProgress, error) {
     do {
-        console.log(workInProgress, 99999)
-        console.log(error, 99999)
         workInProgress = workInProgress.return;
         switch (workInProgress.tag) {
             case tag.HostRoot:
@@ -242,7 +261,6 @@ function throwException(workInProgress, error) {
 function workLoop(deadline) {
     if (deadline) {
         while (nextUnitOfWork && deadline.timeRemaining() > 0) {
-
             nextUnitOfWork = performUnitWork(nextUnitOfWork);
         }
     }
@@ -301,6 +319,7 @@ function beginWork(workInProgress) {
             console.log(update, 'up')
             if (!isEmptyObject(update)) {
                 workInProgress.stateNode._partialState = update;
+                workInProgress.effectTag = Effect.UPDATE;
             }
             workInProgress.stateNode.updater = classComponentUpdater;
             return updateClassComponent(workInProgress);

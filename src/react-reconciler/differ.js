@@ -81,7 +81,7 @@ function differChildren(currentFiber, newChildren) {
             if (sameNode(oldChildren[i + 1], newItem)) {
                 remove(oldChildren[i]);
                 oldChildren.splice(i, 1);
-                //i++;
+               // i++;
                 //j++;
             } else {
                 oldChildren.splice(i, 0, newItem);
@@ -226,6 +226,7 @@ export function updateClassComponent(workInProgress) {
         instance._partialState = null;
     }
     element = instance.render();//获取最新的element
+    workInProgress.updateQueue.length = 0;
     oldFiber = workInProgress.child;
     /**
      * 子节点differ算法

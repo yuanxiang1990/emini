@@ -5,7 +5,7 @@ import {Component} from "./src/react/ReactComponent";
 class A extends Component {
     constructor(props) {
         super(props);
-        const list = [];
+        const list = [1];
 
         this.state = {
             title: 1,
@@ -21,15 +21,17 @@ class A extends Component {
         let i = this.state.title;
 
         this.setState({
-            isShowB: true,
-            list: [1, 2, 3, 4]
+            isShowB: !this.state.isShowB,
         })
     }
 
     UNSAFE_componentWillMount() {
+        const list = [];
+        for (let i = 0; i < 11111; i++) {
+            list.push(String(i));
+        }
         this.setState({
-            title: Math.random(),
-            //  list: [Math.random(), Math.random(), Math.random(), Math.random(), Math.random()]
+            list: list
         })
 
     }
@@ -48,9 +50,6 @@ class A extends Component {
 
     componentDidUpdate(prevProps, prevState, snapshot) {
         console.log(snapshot, 'snapshot')
-        /* this.setState({
-             title: 111
-         })*/
         // console.log(prevProps, prevState)
         /* this.setState({
              title: 111
@@ -73,15 +72,7 @@ class A extends Component {
     }
 
     componentDidMount() {
-        const list = [];
-        for (let i = 0; i < 9991; i++) {
-            list.push(String(i));
-        }
-        let i = this.state.title;
-        this.setState({
-            title: i + 1,
-            list: list
-        })
+
     }
 
     componentDidCatch(e) {
@@ -95,17 +86,17 @@ class A extends Component {
         return <div>
             <input type="text" value={1}/>
             <a href="javascript:void(0)" onClick={this.clickHandler}>点击</a>
-
+            {this.state.isShowB ? <B/> : ''}
             {<ul>
                 {
                     this.state.list.map((item) => <li key={item}>{item}</li>)
                 }
             </ul>}
+
             <div>
                 {this.state.title}
             </div>
-            {this.state.isShowB ? <div>这是在class类型组件前插入节点</div> : ''}
-            {this.state.isShowB ? <B/> : ''}
+
             <div>
                 {this.state.eventTitle}
             </div>
