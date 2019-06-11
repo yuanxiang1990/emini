@@ -26,13 +26,7 @@ class A extends Component {
     }
 
     UNSAFE_componentWillMount() {
-        const list = [];
-        for (let i = 0; i < 11111; i++) {
-            list.push(String(i));
-        }
-        this.setState({
-            list: list
-        })
+
 
     }
 
@@ -72,7 +66,13 @@ class A extends Component {
     }
 
     componentDidMount() {
-
+        const list = [];
+        for (let i = 0; i < 11111; i++) {
+            list.push(String(i));
+        }
+        this.setState({
+            list: list
+        })
     }
 
     componentDidCatch(e) {
