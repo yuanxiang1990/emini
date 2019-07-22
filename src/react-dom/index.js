@@ -18,7 +18,6 @@ const ReactDom = {
         root.alternate = null;
         root.isSync = false;//首屏采用同步渲染
         updateContainer(element, root);
-        console.log(root.stateNode,999)
         return root.stateNode;
     }
 };

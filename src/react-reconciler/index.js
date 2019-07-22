@@ -79,6 +79,10 @@ function updateContainerAtExpirationTime(currentFiber, expirationTime) {
 function scheduleWork(root, expirationTime) {
     addRootToSchedule(root, expirationTime);
 
+    /**
+     * 合并更新参数控制，事件回调当中如果有多个setState为了提升效率，
+     * 不会立即触发reconcile和commit，只是将要更新的root放入更新队列当中，回调完成后再一起更新
+     */
     if (isBatchingUpdates) {
         return;
     }
@@ -116,7 +120,6 @@ function addRootToSchedule(root, expirationTime) {
     if (!isAdd) {
         rootQueue.push(root);
     }
-    console.log(rootQueue,909090)
 }
 
 
@@ -316,7 +319,6 @@ function beginWork(workInProgress) {
             workInProgress.updateQueue.forEach(item => {
                 update = Object.assign(update, item.payload);
             })
-            console.log(update, 'up')
             if (!isEmptyObject(update)) {
                 workInProgress.stateNode._partialState = update;
                 workInProgress.effectTag = Effect.UPDATE;

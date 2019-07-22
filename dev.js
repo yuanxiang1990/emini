@@ -5,7 +5,7 @@ import {Component} from "./src/react/ReactComponent";
 class A extends Component {
     constructor(props) {
         super(props);
-        const list = [1];
+        const list = [1, 2, 3];
 
         this.state = {
             title: 1,
@@ -17,11 +17,11 @@ class A extends Component {
     }
 
     clickHandler = (e) => {
-        e.stopPropagation();
-        let i = this.state.title;
+
 
         this.setState({
-            isShowB: !this.state.isShowB,
+            list: this.state.list.reverse(),
+            title: '1212'
         })
     }
 
@@ -66,15 +66,7 @@ class A extends Component {
     }
 
     componentDidMount() {
-        setTimeout(()=>{
-            const list = [];
-            for (let i = 0; i < 11111; i++) {
-                list.push(String(i));
-            }
-            this.setState({
-                list: list
-            })
-        },10)
+
 
     }
 
@@ -83,27 +75,33 @@ class A extends Component {
     }
 
     render() {
-        if (this.state.error) {
-            return <div className="test" id="test"><b style="color:red">出错了！！！{this.state.msg}</b></div>
-        }
+        /* if (this.state.error) {
+             return <div className="test" id="test"><b style="color:red">出错了！！！{this.state.msg}</b></div>
+         }*/
         return <div>
-            <input type="text" value={1}/>
             <a href="javascript:void(0)" onClick={this.clickHandler}>点击</a>
-            {this.state.isShowB ? <B/> : ''}
-            {<ul>
+            <div>
                 {
-                    this.state.list.map((item) => <li key={item}>{item}</li>)
+                    this.state.list.map((item, i) => <C key={item}/>)
                 }
-            </ul>}
-
+            </div>
             <div>
                 {this.state.title}
             </div>
-
             <div>
                 {this.state.eventTitle}
             </div>
         </div>
+    }
+}
+
+class C extends Component {
+    constructor(props) {
+        super(props)
+    }
+
+    render() {
+        return <input/>
     }
 }
 
@@ -162,3 +160,4 @@ ReactDom.render(
         <A/>
     </div>
     , document.getElementById('main'));
+

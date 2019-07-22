@@ -52,17 +52,25 @@ function createFiberFromElement(element) {
  * @param newChildren
  * @returns {{moves: Array, children: Array}}
  */
-function differChildren(currentFiber, newChildren) {
+function differChildren(returnFiber, oldChildren, newChildren) {
     let i = 0, j = 0;//i:simulate indx j:new array index
-    let newFirstFiber, preFiber, oldChildren = fiberListToArray(currentFiber.alternate && currentFiber.alternate.child);
+    let newFirstFiber, preFiber;
     newChildren = !Array.isArray(newChildren) ? [newChildren] : newChildren;
     while (j < newChildren.length) {
         var newItem = newChildren[j];
+        /**
+         * 存在当前fiber是数组的情况
+         */
+        if (Array.isArray(newItem)) {
+            newChildren.splice(j, 1, ...newItem);
+            newItem = newChildren[j];
+
+        }
         if (sameNode(oldChildren[i], newChildren[j])) {
             let fiber = createFiberFromElement(newItem);//创建新的fiber节点
             oldChildren[i].effects.length = 0;
             fiber.alternate = oldChildren[i] || null;//储存旧的节点
-            fiber.return = currentFiber;
+            fiber.return = returnFiber;
             fiber.stateNode = oldChildren[i].stateNode;
             fiber.updateQueue = oldChildren[i].updateQueue;
             fiber.stateNode._reactInternalFiber = fiber;
@@ -81,7 +89,7 @@ function differChildren(currentFiber, newChildren) {
             if (sameNode(oldChildren[i + 1], newItem)) {
                 remove(oldChildren[i]);
                 oldChildren.splice(i, 1);
-               // i++;
+                // i++;
                 //j++;
             } else {
                 oldChildren.splice(i, 0, newItem);
@@ -107,7 +115,7 @@ function differChildren(currentFiber, newChildren) {
     // 记录remove操作
     function remove(item) {
         item.effectTag = Effect.DELETION;
-        currentFiber.effects.push(item);
+        returnFiber.effects.push(item);
     }
 
     // 记录insert操作
@@ -128,7 +136,7 @@ function differChildren(currentFiber, newChildren) {
             stateNode.__reactInternalInstance = fiber;
             fiber.stateNode = stateNode;
         }
-        fiber.return = currentFiber;
+        fiber.return = returnFiber;
         if (preFiber) {
             preFiber.sibling = fiber;
         }
@@ -161,24 +169,24 @@ function fiberListToArray(fiber) {
 
 /**
  * 普通dom组件更新
- * @param currentFiber
+ * @param workInProgress
  * @returns {*}
  */
-export function updateHostComponent(currentFiber) {
-    let oldFiber, newFiber, element = currentFiber.props.children;
+export function updateHostComponent(workInProgress) {
+    let oldFiber, newFiber, element = workInProgress.props.children;
     /**
      * 无子节点的情况
      */
     if (!element) {
         return null;
     }
-    oldFiber = currentFiber.child;
+    oldFiber = workInProgress.child;
     /**
      * 子节点differ算法
      */
-    newFiber = differChildren(currentFiber, element);
+    newFiber = differChildren(workInProgress, fiberListToArray(workInProgress.alternate && workInProgress.alternate.child), element);
     newFiber && (newFiber.child = (oldFiber ? oldFiber.child : null));
-    return currentFiber.child = newFiber;//链接新节点到workInprogress树
+    return workInProgress.child = newFiber;//链接新节点到workInprogress树
 }
 
 /**
@@ -231,7 +239,7 @@ export function updateClassComponent(workInProgress) {
     /**
      * 子节点differ算法
      */
-    newFiber = differChildren(workInProgress, element);
+    newFiber = differChildren(workInProgress, fiberListToArray(workInProgress.alternate && workInProgress.alternate.child), element);
     newFiber && (newFiber.child = (oldFiber ? oldFiber.child : null));
     return workInProgress.child = newFiber;//链接新节点到workInprogress树
 }
