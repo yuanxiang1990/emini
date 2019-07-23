@@ -101,6 +101,7 @@ class C extends Component {
     }
 
     render() {
+        const {value} = this.props;
         return <input/>
     }
 }

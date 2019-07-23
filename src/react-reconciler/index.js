@@ -350,9 +350,10 @@ export function createWorkInProgress(current) {
         current.alternate = workInProgress;
     } else {
         workInProgress.effects = [];
-        workInProgress.child = current.child;
         workInProgress.props = current.props;
     }
+    workInProgress.type = current.type;
+    workInProgress.child = current.child;
     workInProgress.expirationTime = current.expirationTime;
     workInProgress.updateQueue = current.updateQueue;
     return workInProgress;

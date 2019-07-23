@@ -43,7 +43,35 @@ function createFiberFromElement(element) {
             element.key
         );
     }
+    if (typeof element.type === "function") {
+        newFiber.stateNode = new element.type(element.props);
+        newFiber.stateNode._reactInternalFiber = newFiber;
+    }
+    else if (typeof element.type === "string") {
+        let stateNode = document.createElement(element.type);
+        stateNode.__reactInternalInstance = newFiber;
+        newFiber.stateNode = stateNode;
+    }
+    else {
+        let stateNode = document.createTextNode(element)
+        stateNode.__reactInternalInstance = newFiber;
+        newFiber.stateNode = stateNode;
+    }
     return newFiber;
+}
+
+/**
+ * 标记已存在的节点
+ */
+function mapExistingChildren(oldChildren) {
+    const existingChildren = new Map();
+    for (let i = 0; i < oldChildren.length; i++) {
+        let key = oldChildren[i].props && oldChildren[i].props.key;
+        if (key) {
+            existingChildren.set(key, oldChildren[i]);
+        }
+    }
+    return existingChildren;
 }
 
 /**
@@ -56,6 +84,7 @@ function differChildren(returnFiber, oldChildren, newChildren) {
     let i = 0, j = 0;//i:simulate indx j:new array index
     let newFirstFiber, preFiber;
     newChildren = !Array.isArray(newChildren) ? [newChildren] : newChildren;
+    const existingChildren = mapExistingChildren(oldChildren);
     while (j < newChildren.length) {
         var newItem = newChildren[j];
         /**
@@ -89,8 +118,6 @@ function differChildren(returnFiber, oldChildren, newChildren) {
             if (sameNode(oldChildren[i + 1], newItem)) {
                 remove(oldChildren[i]);
                 oldChildren.splice(i, 1);
-                // i++;
-                //j++;
             } else {
                 oldChildren.splice(i, 0, newItem);
                 insert(j, newItem);
@@ -120,22 +147,19 @@ function differChildren(returnFiber, oldChildren, newChildren) {
 
     // 记录insert操作
     function insert(j, item) {
-        let fiber = createFiberFromElement(item);
-        fiber.effectTag = Effect.PLACEMENT;
-        if (typeof item.type === "function") {
-            fiber.stateNode = new item.type(item.props);
-            fiber.stateNode._reactInternalFiber = fiber;
-        }
-        else if (typeof item.type === "string") {
-            let stateNode = document.createElement(item.type);
-            stateNode.__reactInternalInstance = fiber;
-            fiber.stateNode = stateNode;
+        let fiber = null;
+        /**
+         * 重复使用以前的fiber节点以节省性能
+         */
+        const existingChild = item.props && existingChildren.get(item.props.key);
+        if (existingChild && (existingChild.type === item.type)) {
+            fiber = createWorkInProgress(existingChild);
+            fiber.stateNode = existingChild.stateNode;
         }
         else {
-            let stateNode = document.createTextNode(item)
-            stateNode.__reactInternalInstance = fiber;
-            fiber.stateNode = stateNode;
+            fiber = createFiberFromElement(item);
         }
+        fiber.effectTag = Effect.PLACEMENT;
         fiber.return = returnFiber;
         if (preFiber) {
             preFiber.sibling = fiber;

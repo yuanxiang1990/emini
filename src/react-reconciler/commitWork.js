@@ -22,8 +22,9 @@ export function commitAllWork(topFiber) {
 }
 
 function commitPlacement(fiber, domParent) {
+    //TODO 目前存在问题，初始化时class组件的dom操作会执行两次!
     if (fiber.tag === tag.ClassComponent) {
-        return;
+        fiber = fiber.child;
     }
     const before = getHostSibling(domParent, fiber);
     if (!before) {
