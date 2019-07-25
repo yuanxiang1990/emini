@@ -5,7 +5,7 @@ import {Component} from "./src/react/ReactComponent";
 class A extends Component {
     constructor(props) {
         super(props);
-        const list = [1, 2, 3];
+        const list = [];
 
         this.state = {
             title: 1,
@@ -26,7 +26,12 @@ class A extends Component {
     }
 
     UNSAFE_componentWillMount() {
-
+        for (let i = 5; i < 99999; i++) {
+            this.state.list.push(i)
+        }
+        this.setState({
+            list: this.state.list
+        })
 
     }
 
@@ -43,7 +48,7 @@ class A extends Component {
     }
 
     componentDidUpdate(prevProps, prevState, snapshot) {
-        console.log(snapshot, 'snapshot')
+        //console.log(snapshot, 'snapshot')
         // console.log(prevProps, prevState)
         /* this.setState({
              title: 111
@@ -62,11 +67,11 @@ class A extends Component {
     }
 
     componentWillUnmount() {
-        console.log('Component WILL UNMOUNT!')
+        console.log('Component WILL UNMOUNT!');
+
     }
 
     componentDidMount() {
-
 
     }
 
@@ -82,14 +87,8 @@ class A extends Component {
             <a href="javascript:void(0)" onClick={this.clickHandler}>点击</a>
             <div>
                 {
-                    this.state.list.map((item, i) => <C key={item}/>)
+                    this.state.list.map((item, i) => <div key={item}>{String(item)}</div>)
                 }
-            </div>
-            <div>
-                {this.state.title}
-            </div>
-            <div>
-                {this.state.eventTitle}
             </div>
         </div>
     }
@@ -156,9 +155,6 @@ class B extends Component {
 }
 
 ReactDom.render(
-    <div>
-        测试测试
         <A/>
-    </div>
     , document.getElementById('main'));
 

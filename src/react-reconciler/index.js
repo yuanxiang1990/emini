@@ -164,7 +164,6 @@ function performWork(deadline) {
             res = performWorkOnRoot(deadline, nextFlushedRoot)
         }
         if (res && res.status === "timeout") {
-            console.log("timeout")
             break;
         }
         else {

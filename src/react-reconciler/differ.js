@@ -15,7 +15,7 @@ function sameNode(oldNode, newNode) {
     if (!oldNode || !newNode) {
         return false;
     }
-    if (oldNode.props.key && newNode.props.key) {
+    if (typeof oldNode.props.key !== "undefined" && typeof newNode.props.key !== "undefined") {
         return oldNode.props.key === newNode.props.key;
     }
     if (typeof oldNode.type === 'undefined' && typeof newNode.type === 'undefined') {
@@ -67,7 +67,7 @@ function mapExistingChildren(oldChildren) {
     const existingChildren = new Map();
     for (let i = 0; i < oldChildren.length; i++) {
         let key = oldChildren[i].props && oldChildren[i].props.key;
-        if (key) {
+        if (typeof key !== "undefined" && String(key)) {
             existingChildren.set(key, oldChildren[i]);
         }
     }
@@ -96,13 +96,11 @@ function differChildren(returnFiber, oldChildren, newChildren) {
 
         }
         if (sameNode(oldChildren[i], newChildren[j])) {
-            let fiber = createFiberFromElement(newItem);//创建新的fiber节点
-            oldChildren[i].effects.length = 0;
-            fiber.alternate = oldChildren[i] || null;//储存旧的节点
+            let fiber = createWorkInProgress(oldChildren[i]);//创建新的fiber节点
             fiber.return = returnFiber;
             fiber.stateNode = oldChildren[i].stateNode;
-            fiber.updateQueue = oldChildren[i].updateQueue;
             fiber.stateNode._reactInternalFiber = fiber;
+            fiber.props = newItem.props||{};
             if (!preFiber) {
                 newFirstFiber = fiber;
             }
