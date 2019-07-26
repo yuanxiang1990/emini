@@ -20,13 +20,13 @@ class A extends Component {
 
 
         this.setState({
-            list: this.state.list.reverse(),
+            list: this.state.list.slice(11900),
             title: '1212'
         })
     }
 
     UNSAFE_componentWillMount() {
-        for (let i = 5; i < 99999; i++) {
+        for (let i = 5; i < 12000; i++) {
             this.state.list.push(i)
         }
         this.setState({
@@ -80,14 +80,14 @@ class A extends Component {
     }
 
     render() {
-        /* if (this.state.error) {
+        if (this.state.error) {
              return <div className="test" id="test"><b style="color:red">出错了！！！{this.state.msg}</b></div>
-         }*/
+         }
         return <div>
             <a href="javascript:void(0)" onClick={this.clickHandler}>点击</a>
             <div>
                 {
-                    this.state.list.map((item, i) => <div key={item}>{String(item)}</div>)
+                    this.state.list.map((item, i) => <input key={item} />)
                 }
             </div>
         </div>

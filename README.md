@@ -8,7 +8,7 @@
 4. fiber任务调度机制(待完善)。
 5. react事件支持(初步实现)。
 6. 当当前组件无更新时需要跳过当前组件。(TODO)
-7. differ算法优化（解决每次differ相同key对象会重复创建的问题）（TODO）
+7. differ算法优化（解决每次differ相同key对象会重复创建的问题）（ok）
 8. reconcile打算优化（目前存在bug，打断后会直接进入commit）（TODO）
 9. function component组件支持（TODO 低优先级）
 10. reactUpdateQueue实现。(TODO)
