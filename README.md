@@ -2,16 +2,19 @@
 
 ## 主要实现react fiber架构。
 
-1. setSatate支持(ok)。
-2. class类型组件支持(ok)。
-3. 组件生命周期支持(ok)。
-4. fiber任务调度机制(待完善)。
+### TODO LIST
+
+1. setSatate支持(done)。
+2. class类型组件支持(done)。
+3. 组件生命周期支持(done)。
+4. fiber任务调度机制(初步实现)。
 5. react事件支持(初步实现)。
-6. 当当前组件无更新时需要跳过当前组件。(TODO)
-7. differ算法优化（解决每次differ相同key对象会重复创建的问题）（ok）
-8. reconcile打算优化（目前存在bug，打断后会直接进入commit）（TODO）
-9. function component组件支持（TODO 低优先级）
-10. reactUpdateQueue实现。(TODO)
+6. 当当前组件无更新时需要跳过当前组件。(TODO 中)
+7. differ算法优化（解决每次differ相同key对象会重复创建的问题）（done）
+8. reconcile打算优化（目前存在bug，打断后会直接进入commit）（TODO 中）
+9. function component组件和Hook支持（TODO 低）
+10. 目前仅实现了rootQueue，针对单fiber的updateQueue没有做优先级处理(TODO 低)
+11. differ性能（去除链表转数组操作）（TODO 低）
 
 ## 为什么需要fiber架构
 react的大体流程主要分为render阶段和commit阶段。render阶段主要differ出虚拟dom的变更，即收集各节点的effect。commit阶段主要将各节点的effcet应用到真实dom上。在react16之前，render阶段采用递归的方式实现，当dom节点较为复杂时，render的执行时间会非常长。由于js代码执行和浏览器dom操作都是执行在主线程上，render阶段可能会持续占用主线程，造成用户的很多操作的得不到马上响应，十分影响用户体验。所以react16提出了fiber架构来解决这个问题。

@@ -20,13 +20,13 @@ class A extends Component {
 
 
         this.setState({
-            list: this.state.list.slice(11900),
+            list: this.state.list.reverse(),
             title: '1212'
         })
     }
 
     UNSAFE_componentWillMount() {
-        for (let i = 5; i < 12000; i++) {
+        for (let i = 0; i < 10; i++) {
             this.state.list.push(i)
         }
         this.setState({

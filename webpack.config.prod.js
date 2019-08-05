@@ -3,7 +3,7 @@ const HappyPack = require("happypack");
 baseConfig.mode = "production";
 baseConfig.devtool = "cheap-module-source-map";
 baseConfig.entry = {
-    app:["./src/index.js"]
+    emini:["./src/index.js"]
 }
 baseConfig.plugins = [
     new HappyPack({
