@@ -13,7 +13,7 @@
 7. differ算法优化（解决每次differ相同key对象会重复创建的问题）（done）
 8. reconcile打算优化（目前存在bug，打断后会直接进入commit）（TODO 中）
 9. function component组件和Hook支持（TODO 低）
-10. 目前仅实现了rootQueue，针对单fiber的updateQueue没有做优先级处理(TODO 低)
+10. 目前仅实现了rootQueue，针对单fiber的updateQueue没有做优先级处理，调度任务的粒度应该是针对每一次setState！！！(TODO done)
 11. differ性能（去除链表转数组操作）（TODO 低）
 
 ## 为什么需要fiber架构

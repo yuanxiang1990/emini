@@ -85,6 +85,7 @@ function differChildren(returnFiber, oldChildren, newChildren) {
     let newFirstFiber, preFiber;
     newChildren = !Array.isArray(newChildren) ? [newChildren] : newChildren;
     const existingChildren = mapExistingChildren(oldChildren);
+    console.log(oldChildren.slice(),newChildren,0)
     while (j < newChildren.length) {
         var newItem = newChildren[j];
         /**
@@ -252,11 +253,7 @@ export function updateClassComponent(workInProgress) {
     }
     instance.state = newState;
     workInProgress.memoizedState = {...newState};//和stateNode指向不同对象，防止更改stateNode时影响到外层memoizedState
-    if (instance._partialState) {
-        instance._partialState = null;
-    }
     element = instance.render();//获取最新的element
-    workInProgress.updateQueue.length = 0;
     oldFiber = workInProgress.child;
     /**
      * 子节点differ算法

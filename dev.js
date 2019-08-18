@@ -2,6 +2,10 @@ import ReactDom from "./src/react-dom";
 import React from "./src/react";
 import {Component} from "./src/react/ReactComponent";
 
+const D = (props) => {
+    return <div>DDD</div>
+}
+
 class A extends Component {
     constructor(props) {
         super(props);
@@ -17,22 +21,18 @@ class A extends Component {
     }
 
     clickHandler = (e) => {
-
-
         this.setState({
-            list: this.state.list.reverse(),
+            list: [1, 2, 3],
             title: '1212'
         })
+
     }
 
     UNSAFE_componentWillMount() {
-        for (let i = 0; i < 10; i++) {
-            this.state.list.push(i)
-        }
         this.setState({
-            list: this.state.list
+            eventTitle: '2121',
+            list: [1, 2, 3, 4, 5]
         })
-
     }
 
     getSnapshotBeforeUpdate(prevProps, prevState) {
@@ -68,10 +68,12 @@ class A extends Component {
 
     componentWillUnmount() {
         console.log('Component WILL UNMOUNT!');
-
     }
 
     componentDidMount() {
+        this.setState({
+            list: [90909090]
+        })
 
     }
 
@@ -81,13 +83,14 @@ class A extends Component {
 
     render() {
         if (this.state.error) {
-             return <div className="test" id="test"><b style="color:red">出错了！！！{this.state.msg}</b></div>
-         }
+            return <div className="test" id="test"><b style="color:red">出错了！！！{this.state.msg}</b></div>
+        }
         return <div>
+            {this.state.eventTitle}<br/>
             <a href="javascript:void(0)" onClick={this.clickHandler}>点击</a>
             <div>
                 {
-                    this.state.list.map((item, i) => <input key={item} />)
+                    this.state.list.map((item, i) => <input key={item} value={item}/>)
                 }
             </div>
         </div>
@@ -101,7 +104,7 @@ class C extends Component {
 
     render() {
         const {value} = this.props;
-        return <input/>
+        return <input value={value}/>
     }
 }
 
@@ -155,6 +158,6 @@ class B extends Component {
 }
 
 ReactDom.render(
-        <A/>
+    <A/>
     , document.getElementById('main'));
 

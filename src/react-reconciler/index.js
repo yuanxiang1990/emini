@@ -25,7 +25,7 @@ let currentSchedulerTime = maxSigned31BitInt - Date.now();
 let nextFlushedExpirationTime = NoWork;
 let currentRendererTime = msToExpirationTime(originalStartTimeMs);
 // The time at which we're currently rendering work.
-let nextRenderExpirationTime = NoWork;
+let nextRenderExpirationTime = NoWork;//正在渲染的任务的优先级！！！
 let isWorking = false;
 let isCommitting = false;
 let isBatchingInteractiveUpdates = false;//是否高优先级更新，如用户交互等
@@ -43,18 +43,16 @@ const classComponentUpdater = {
     enqueueSetState: function (inst, payload) {
         const fiber = inst._reactInternalFiber;
         const currentTime = requestCurrentTime();
-        const root = getRootFiber(fiber);
-        const expirationTime = computeExpirationForFiber(currentTime, root);
-        root.expirationTime = expirationTime;
-        root.isSync = false;
+        const expirationTime = computeExpirationForFiber(currentTime, fiber);
         if (expirationTime > nextRenderExpirationTime) {//更高优先级任务到来时终止当前任务
             nextUnitOfWork = null;
             nextRenderExpirationTime = NoWork;
         }
         fiber.updateQueue.push({
+            expirationTime,
             payload
         })
-        scheduleWork(root, expirationTime);
+        scheduleWork(fiber, expirationTime);
     }
 }
 
@@ -64,6 +62,8 @@ export function updateContainer(children, containerFiberRoot) {
     let currentTime = requestCurrentTime();
     let expirationTime = computeExpirationForFiber(currentTime, root);
     root.expirationTime = expirationTime;
+    root.lowestPendingTime = NoWork;
+    root.highestPendingTime = NoWork;
     root.updateQueue.push({
         element: children
     })
@@ -76,7 +76,11 @@ function updateContainerAtExpirationTime(currentFiber, expirationTime) {
 }
 
 
-function scheduleWork(root, expirationTime) {
+function scheduleWork(fiber, expirationTime) {
+    const root = getRootFiber(fiber);
+    root.expirationTime = expirationTime;
+    root.isSync = false;
+    markPendingPriorityLevel(root, expirationTime);
     addRootToSchedule(root, expirationTime);
 
     /**
@@ -88,6 +92,25 @@ function scheduleWork(root, expirationTime) {
     }
 
     requestWork(root, expirationTime);
+}
+
+
+/**
+ * 该方法用于标记当前root的最高优先级任务和最低优先级任务，用commit完成之后，判断是否还有更多的任务
+ * @param root
+ * @param expirationTime
+ */
+function markPendingPriorityLevel(root, expirationTime) {
+    console.log(root.lowestPendingTime, root.highestPendingTime, expirationTime, 9090)
+    if (root.lowestPendingTime === NoWork && root.highestPendingTime === NoWork) {
+        root.lowestPendingTime = root.highestPendingTime = expirationTime;
+    }
+    else if (root.lowestPendingTime > expirationTime) {
+        root.lowestPendingTime = expirationTime;
+    }
+    else if (root.highestPendingTime < expirationTime) {
+        root.highestPendingTime = expirationTime;
+    }
 }
 
 function requestWork(root, expirationTime) {
@@ -186,7 +209,7 @@ function performWorkOnRoot(deadline, root) {
         nextRenderExpirationTime = workInProgress.expirationTime;
     }
     try {
-        workLoop(deadline);
+        workLoop(deadline,root);
     }
     catch (e) {
         console.error(e);
@@ -215,19 +238,39 @@ function performWorkOnRoot(deadline, root) {
     }
     /**
      * 任务已处理完，直接进入commit阶段
+     * TODO 此处应还包括任务打断处理！！
      */
     else {
         commitPreLifeCycle(pendingCommit);
         isCommitting = true;
         commitAllWork(pendingCommit);
         commitAfterLifeCycle(pendingCommit);
-        nextFlushedRoot.expirationTime = NoWork;
-        rootQueue.splice(rootQueue.indexOf(nextFlushedRoot), 1);
+        //当前任务是最低优先级任务，改root节点的任务已经执行完成，直接结束。
+        console.log(expirationTime,root.lowestPendingTime,root.highestPendingTime)
+        if (expirationTime === root.lowestPendingTime) {
+            root.highestPendingTime = NoWork;
+            root.lowestPendingTime = NoWork;
+            root.expirationTime = NoWork;
+            rootQueue.splice(rootQueue.indexOf(nextFlushedRoot), 1);
+            /**
+             * 所有队列的任务都已经执行完
+             */
+            if(rootQueue.length===0){
+                root.alternate.highestPendingTime = NoWork;
+                root.alternate.lowestPendingTime = NoWork;
+                root.alternate.expirationTime = NoWork;
+            }
+        }
+        else {
+            rootQueue.splice(rootQueue.indexOf(nextFlushedRoot), 1);
+            pendingCommit.expirationTime = root.nextExpirationTime;
+            pendingCommit.highestPendingTime = root.nextExpirationTime;
+            addRootToSchedule(pendingCommit, root.nextExpirationTime);
+        }
         pendingCommit.effects = [];
         isCommitting = false;
         isRendering = false;
         isWorking = false;
-        pendingCommit = null;
         nextRenderExpirationTime = NoWork;
     }
 }
@@ -260,24 +303,24 @@ function throwException(workInProgress, error) {
     } while (workInProgress !== null);
 }
 
-function workLoop(deadline) {
+function workLoop(deadline,root) {
     if (deadline) {
         while (nextUnitOfWork && deadline.timeRemaining() > 0) {
-            nextUnitOfWork = performUnitWork(nextUnitOfWork);
+            nextUnitOfWork = performUnitWork(nextUnitOfWork,root);
         }
     }
     else {
         while (nextUnitOfWork) {
-            nextUnitOfWork = performUnitWork(nextUnitOfWork);
+            nextUnitOfWork = performUnitWork(nextUnitOfWork,root);
         }
     }
 }
 
 
-function performUnitWork(nextUnitOfWork) {
+function performUnitWork(nextUnitOfWork,root) {
     const currentFiber = nextUnitOfWork;
-    const nextChild = beginWork(currentFiber);
-    finalizeInitialFiber(currentFiber, getRootFiber(currentFiber))
+    const nextChild = beginWork(currentFiber,root);
+    finalizeInitialFiber(currentFiber, root)
     if (nextChild) return nextChild;
     let topFiber = currentFiber;
     while (topFiber) {
@@ -310,16 +353,29 @@ function completeWork(workInProgress) {
 
 }
 
-function beginWork(workInProgress) {
+function beginWork(workInProgress,root) {
     workInProgress.effects.length = 0;
     switch (workInProgress.tag) {
         case tag.ClassComponent: {//处理class类型组件
-            let update = {};
-            workInProgress.updateQueue.forEach(item => {
-                update = Object.assign(update, item.payload);
+            /**
+             * 需从updateQueue中筛选出优先级最高的任务执行
+             */
+            let baseState =  {};//记录已经执行了的状态
+            console.log(workInProgress.updateQueue.slice(0))
+            workInProgress.updateQueue.forEach((item, i) => {
+                if (root.highestPendingTime === item.expirationTime) {
+                    baseState = Object.assign(baseState, item.payload);
+                    workInProgress.updateQueue.splice(i, 1);
+                }
             })
-            if (!isEmptyObject(update)) {
-                workInProgress.stateNode._partialState = update;
+            root.nextExpirationTime = root.nextExpirationTime || NoWork;
+            workInProgress.updateQueue.forEach((item) => {
+                if (item.expirationTime > root.nextExpirationTime) {
+                    root.nextExpirationTime = item.expirationTime;
+                }
+            })
+            if (!isEmptyObject(baseState)) {
+                workInProgress.stateNode._partialState = baseState;
                 workInProgress.effectTag = Effect.UPDATE;
             }
             workInProgress.stateNode.updater = classComponentUpdater;
@@ -355,6 +411,8 @@ export function createWorkInProgress(current) {
     workInProgress.child = current.child;
     workInProgress.expirationTime = current.expirationTime;
     workInProgress.updateQueue = current.updateQueue;
+    workInProgress.lowestPendingTime = current.lowestPendingTime;
+    workInProgress.highestPendingTime = current.highestPendingTime;
     return workInProgress;
 }
 
