@@ -85,7 +85,6 @@ function differChildren(returnFiber, oldChildren, newChildren) {
     let newFirstFiber, preFiber;
     newChildren = !Array.isArray(newChildren) ? [newChildren] : newChildren;
     const existingChildren = mapExistingChildren(oldChildren);
-    console.log(oldChildren.slice(),newChildren,0)
     while (j < newChildren.length) {
         var newItem = newChildren[j];
         /**
@@ -102,6 +101,7 @@ function differChildren(returnFiber, oldChildren, newChildren) {
             fiber.stateNode = oldChildren[i].stateNode;
             fiber.stateNode._reactInternalFiber = fiber;
             fiber.props = newItem.props||{};
+            fiber.sibling = null;
             if (!preFiber) {
                 newFirstFiber = fiber;
             }
@@ -111,6 +111,7 @@ function differChildren(returnFiber, oldChildren, newChildren) {
             i++;
             j++;
             preFiber = fiber;
+            console.log(fiber,0)
             continue;
         }
         if (oldChildren[i]) {

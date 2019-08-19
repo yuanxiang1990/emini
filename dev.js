@@ -22,7 +22,7 @@ class A extends Component {
 
     clickHandler = (e) => {
         this.setState({
-            list: [1, 2, 3],
+            list: [1,2],
             title: '1212'
         })
 
