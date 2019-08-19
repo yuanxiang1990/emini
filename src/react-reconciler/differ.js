@@ -65,42 +65,44 @@ function createFiberFromElement(element) {
  */
 function mapExistingChildren(oldChildren) {
     const existingChildren = new Map();
-    for (let i = 0; i < oldChildren.length; i++) {
-        let key = oldChildren[i].props && oldChildren[i].props.key;
+    let node = oldChildren;
+    while (node) {
+        let key = node.props && node.props.key;
         if (typeof key !== "undefined" && String(key)) {
-            existingChildren.set(key, oldChildren[i]);
+            existingChildren.set(key, node);
         }
+        node = node.sibling;
     }
     return existingChildren;
 }
 
 /**
  * 子节点differ算法
- * @param oldChildren
- * @param newChildren
- * @returns {{moves: Array, children: Array}}
+ * @param oldChildren 旧的子节点对象
+ * @param newChildren 新的子节点对象
  */
 function differChildren(returnFiber, oldChildren, newChildren) {
     let i = 0, j = 0;//i:simulate indx j:new array index
     let newFirstFiber, preFiber;
     newChildren = !Array.isArray(newChildren) ? [newChildren] : newChildren;
     const existingChildren = mapExistingChildren(oldChildren);
+    let oldNode = oldChildren;
     while (j < newChildren.length) {
         var newItem = newChildren[j];
         /**
-         * 存在当前fiber是数组的情况
+         * 存在当前element是数组的情况
          */
         if (Array.isArray(newItem)) {
             newChildren.splice(j, 1, ...newItem);
             newItem = newChildren[j];
-
         }
-        if (sameNode(oldChildren[i], newChildren[j])) {
-            let fiber = createWorkInProgress(oldChildren[i]);//创建新的fiber节点
+
+        if (sameNode(oldNode, newChildren[j])) {
+            let fiber = createWorkInProgress(oldNode);//创建新的fiber节点
             fiber.return = returnFiber;
-            fiber.stateNode = oldChildren[i].stateNode;
+            fiber.stateNode = oldNode.stateNode;
             fiber.stateNode._reactInternalFiber = fiber;
-            fiber.props = newItem.props||{};
+            fiber.props = newItem.props || {};
             fiber.sibling = null;
             if (!preFiber) {
                 newFirstFiber = fiber;
@@ -108,35 +110,30 @@ function differChildren(returnFiber, oldChildren, newChildren) {
             else {
                 preFiber.sibling = fiber;
             }
-            i++;
+            oldNode = oldNode.sibling;
             j++;
             preFiber = fiber;
-            console.log(fiber,0)
             continue;
         }
-        if (oldChildren[i]) {
-            if (sameNode(oldChildren[i + 1], newItem)) {
-                remove(oldChildren[i]);
-                oldChildren.splice(i, 1);
+        if (oldNode) {
+            if (sameNode(oldNode.sibling, newItem)) {
+                remove(oldNode);
+                oldNode = oldNode.sibling;
             } else {
-                oldChildren.splice(i, 0, newItem);
                 insert(j, newItem);
-                i++;
                 j++;
             }
         } else {
-            oldChildren.push(newItem);
             insert(j, newItem);
-            i++;
             j++;
         }
     }
     /**
      * 移除多余的dom元素
      */
-    while (oldChildren.length > newChildren.length) {
-        remove(oldChildren[oldChildren.length - 1]);
-        oldChildren.splice(oldChildren.length - 1, 1);
+    while (oldNode) {
+        remove(oldNode);
+        oldNode = oldNode.sibling;
     }
 
     // 记录remove操作
@@ -174,24 +171,6 @@ function differChildren(returnFiber, oldChildren, newChildren) {
 }
 
 /**
- * 链表换数组
- * @param fiber
- * @returns {Array}
- */
-function fiberListToArray(fiber) {
-    const children = [];
-    if (fiber) {
-        children.push(fiber)
-        let sib = fiber.sibling;
-        while (sib) {
-            children.push(sib);
-            sib = sib.sibling;
-        }
-    }
-    return children
-}
-
-/**
  * 普通dom组件更新
  * @param workInProgress
  * @returns {*}
@@ -208,7 +187,7 @@ export function updateHostComponent(workInProgress) {
     /**
      * 子节点differ算法
      */
-    newFiber = differChildren(workInProgress, fiberListToArray(workInProgress.alternate && workInProgress.alternate.child), element);
+    newFiber = differChildren(workInProgress, workInProgress.alternate && workInProgress.alternate.child, element);
     newFiber && (newFiber.child = (oldFiber ? oldFiber.child : null));
     return workInProgress.child = newFiber;//链接新节点到workInprogress树
 }
@@ -259,7 +238,7 @@ export function updateClassComponent(workInProgress) {
     /**
      * 子节点differ算法
      */
-    newFiber = differChildren(workInProgress, fiberListToArray(workInProgress.alternate && workInProgress.alternate.child), element);
+    newFiber = differChildren(workInProgress, workInProgress.alternate && workInProgress.alternate.child, element);
     newFiber && (newFiber.child = (oldFiber ? oldFiber.child : null));
     return workInProgress.child = newFiber;//链接新节点到workInprogress树
 }

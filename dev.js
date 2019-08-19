@@ -22,16 +22,20 @@ class A extends Component {
 
     clickHandler = (e) => {
         this.setState({
-            list: [1,2],
+            list: [1,2,Math.random()],
             title: '1212'
         })
 
     }
 
     UNSAFE_componentWillMount() {
+        const list = [];
+        for(var i = 0;i<1000;i++){
+            list.push(i);
+        }
         this.setState({
             eventTitle: '2121',
-            list: [1, 2, 3, 4, 5]
+            list: list
         })
     }
 
